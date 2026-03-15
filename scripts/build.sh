@@ -1,36 +1,66 @@
 #!/bin/bash
-PRESET_OR_STAGE=${1:-linux-native}
-CMAKE_TARGET=${2:-all}
-shift 2
-EXTRA_ARGS="$@" # All remaining arguments
+set -e
 
-# Determine the appropriate Docker stage based on the input
-if [[ "$PRESET_OR_STAGE" == *"arm"* || "$PRESET_OR_STAGE" == *"stm32"* ]]; then
-  STAGE="build-arm"
-elif [[ "$PRESET_OR_STAGE" == *"riscv"* || "$PRESET_OR_STAGE" == *"gd32"* ]]; then
-  STAGE="build-riscv"
-elif [[ "$PRESET_OR_STAGE" == *"native"* ]]; then
-  STAGE="build-native"
+# ==============================================================================
+# Caffeine Framework Unified Build Orchestrator (Final Clean Version)
+# ==============================================================================
+
+# --- 1. Configuration & Defaults ---
+PRESET="${1:-linux-native}"
+TARGET="${2:-all}"
+
+# Shift to capture any remaining arguments as extra CMake flags
+if [ "$#" -ge 2 ]; then
+    shift 2
+elif [ "$#" -ge 1 ]; then
+    shift 1
+fi
+EXTRA_ARGS=("$@")
+
+# --- 2. Architecture Detection ---
+# Map preset/stage keywords to the correct specialized Docker image
+if [[ "$PRESET" == *"arm"* || "$PRESET" == *"stm32"* ]]; then
+    STAGE="build-arm"
+elif [[ "$PRESET" == *"riscv"* || "$PRESET" == *"gd32"* ]]; then
+    STAGE="build-riscv"
 else
-  # Default fallback if it doesn't match known patterns
-  STAGE="build-native"
+    STAGE="build-native"
 fi
 
-# The image is built and pushed by the caffeine-build repository
-REPO_OWNER=${GITHUB_REPOSITORY_OWNER:-while-one}
-IMAGE_NAME="ghcr.io/${REPO_OWNER}/caffeine-build/$STAGE:latest"
+REPO_OWNER="${GITHUB_REPOSITORY_OWNER:-while-one}"
+IMAGE_NAME="ghcr.io/${REPO_OWNER}/caffeine-build/${STAGE}:latest"
 
-# Pull the image to ensure it's up-to-date
-echo "Pulling Docker image: $IMAGE_NAME"
-docker pull "$IMAGE_NAME" || { echo "Failed to pull image $IMAGE_NAME. Please ensure it's built and pushed from caffeine-build."; exit 1; }
+# --- 3. Environment Preparation ---
+echo "--------------------------------------------------------------------------------"
+echo " Image:  $IMAGE_NAME"
+echo " Preset: $PRESET"
+echo " Target: $TARGET"
+echo "--------------------------------------------------------------------------------"
 
-# Check if we should use presets or standard build
-if [[ "$PRESET_OR_STAGE" == *"native"* && ! -f "CMakePresets.json" ]]; then
-  # Standard build without presets
-  docker run --rm -v "$(pwd)":/work -w /work "$IMAGE_NAME" \
-      bash -c "rm -rf build && cmake -B build -DFETCHCONTENT_FULLY_DISCONNECTED=OFF $EXTRA_ARGS && cmake --build build --target $CMAKE_TARGET"
+# Ensure we have the latest infrastructure image
+docker pull "$IMAGE_NAME" || {
+    echo "Error: Failed to pull build image. Check your internet connection or GHCR permissions."
+    exit 1
+}
+
+# --- 4. Build Command Construction ---
+# We use an array to maintain proper quoting when passing to bash -c
+if [ -f "CMakePresets.json" ]; then
+    # Modern Preset-based Workflow
+    CMD="cmake --preset $PRESET ${EXTRA_ARGS[*]} && \
+         cmake --build build/$PRESET --target $TARGET"
 else
-  # Build using preset
-  docker run --rm -v "$(pwd)":/work -w /work "$IMAGE_NAME" \
-      bash -c "rm -rf build && cmake --preset $PRESET_OR_STAGE $EXTRA_ARGS && cmake --build build/$PRESET_OR_STAGE --target $CMAKE_TARGET"
+    # Standard Native Workflow
+    CMD="cmake -B build -DFETCHCONTENT_FULLY_DISCONNECTED=OFF ${EXTRA_ARGS[*]} && \
+         cmake --build build --target $TARGET"
 fi
+
+# --- 5. Execution (Containerized) ---
+# We use --user to ensure files created in the volume match the host user's UID/GID
+# this prevents "permission denied" or "git ownership" errors during FetchContent.
+docker run --rm \
+    --user "$(id -u):$(id -g)" \
+    -v "$(pwd)":/work \
+    -w /work \
+    "$IMAGE_NAME" \
+    bash -c "rm -rf build && $CMD"
