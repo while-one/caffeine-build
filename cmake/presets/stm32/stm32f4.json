@@ -1,0 +1,54 @@
+{
+  "version": 4,
+  "include": [
+    "../base.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "stm32f417vg-release",
+      "inherits": "base-arm",
+      "displayName": "STM32F417VG (ARM Cortex-M4)",
+      "binaryDir": "${sourceDir}/build/stm32f417vg-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CAFFEINE_VENDOR": "stm32",
+        "CAFFEINE_PORT_FAMILY": "stm32f4",
+        "CAFFEINE_MCU_CORE": "cortex-m4",
+        "CAFFEINE_MCU_COMPILE_OPTIONS": "-mfloat-abi=hard -mfpu=fpv4-sp-d16",
+        "CAFFEINE_MCU_MACRO": "STM32F417xx",
+        "CAFFEINE_BOARD_LINKER": "STM32F417VGTX_FLASH.ld"
+      }
+    },
+    {
+      "name": "stm32f407-release",
+      "inherits": "base-arm",
+      "displayName": "STM32F407 (ARM Cortex-M4)",
+      "binaryDir": "${sourceDir}/build/stm32f407-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CAFFEINE_VENDOR": "stm32",
+        "CAFFEINE_PORT_FAMILY": "stm32f4",
+        "CAFFEINE_MCU_CORE": "cortex-m4",
+        "CAFFEINE_MCU_COMPILE_OPTIONS": "-mfloat-abi=hard -mfpu=fpv4-sp-d16",
+        "CAFFEINE_MCU_MACRO": "STM32F407xx",
+        "CAFFEINE_BOARD_LINKER": "STM32F407VGTX_FLASH.ld"
+      }
+    },
+    {
+      "name": "stm32f407-bootloader",
+      "inherits": "base-arm",
+      "displayName": "STM32F407 w/ Bootloader (32KB Offset)",
+      "binaryDir": "${sourceDir}/build/stm32f407-bootloader",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CAFFEINE_VENDOR": "stm32",
+        "CAFFEINE_PORT_FAMILY": "stm32f4",
+        "CAFFEINE_MCU_CORE": "cortex-m4",
+        "CAFFEINE_MCU_COMPILE_OPTIONS": "-mfloat-abi=hard -mfpu=fpv4-sp-d16",
+        "CAFFEINE_MCU_MACRO": "STM32F407xx",
+        "CAFFEINE_BOOTLOADER_SIZE_HEX": "0x8000",
+        "CAFFEINE_BOARD_LINKER": "STM32F407VGTX_FLASH.ld"
+      }
+    }
+  ]
+}

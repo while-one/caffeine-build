@@ -1,0 +1,37 @@
+{
+  "version": 4,
+  "include": [
+    "../base.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "gd32vf103-release",
+      "inherits": "base-riscv",
+      "displayName": "GD32VF103 (RISC-V rv32imac)",
+      "binaryDir": "${sourceDir}/build/gd32vf103-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CAFFEINE_VENDOR": "gigadevice",
+        "CAFFEINE_PORT_FAMILY": "gd32v",
+        "CAFFEINE_MCU_ARCH": "rv32imac",
+        "CAFFEINE_MCU_ABI": "ilp32",
+        "CAFFEINE_BOARD_LINKER": "GD32VF103_FLASH.ld"
+      }
+    },
+    {
+      "name": "gd32vf103-bootloader",
+      "inherits": "base-riscv",
+      "displayName": "GD32VF103 w/ Bootloader (16KB Offset)",
+      "binaryDir": "${sourceDir}/build/gd32vf103-bootloader",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CAFFEINE_VENDOR": "gigadevice",
+        "CAFFEINE_PORT_FAMILY": "gd32v",
+        "CAFFEINE_MCU_ARCH": "rv32imac",
+        "CAFFEINE_MCU_ABI": "ilp32",
+        "CAFFEINE_BOOTLOADER_SIZE_HEX": "0x4000",
+        "CAFFEINE_BOARD_LINKER": "GD32VF103_FLASH.ld"
+      }
+    }
+  ]
+}
