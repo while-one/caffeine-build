@@ -78,6 +78,8 @@ jobs:
           sed -i "s/VERSION $CURRENT_VERSION/VERSION $NEW_VERSION/" CMakeLists.txt
 
       - name: Commit and Push
+        env:
+          GITHUB_TOKEN: ${{ secrets.SEMVER_BUMP_TOKEN }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
@@ -86,7 +88,12 @@ jobs:
           if ! git diff --quiet CMakeLists.txt; then
             git add CMakeLists.txt
             git commit -m "semberbot: bump version to ${{ env.NEW_VERSION }} [skip ci]"
-            git push origin main
+            
+            # Use the token for authentication in push
+            git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+            
+            # Push changes to the branch
+            git push origin HEAD:main
             
             # Create and push tag
             git tag "v${{ env.NEW_VERSION }}"
@@ -94,4 +101,3 @@ jobs:
           else
             echo "No version changes to commit."
           fi
-
