@@ -30,6 +30,10 @@ All repositories in the ecosystem (`caffeine-hal`, `caffeine-hal-ports`, `caffei
 - **Dockerfile & Publish Workflow:** Moved the `Dockerfile` and `.github/workflows/docker-publish.yml` from `caffeine-hal` into `caffeine-build`.
 - **Scripts & CI:** Updated the `build.sh` script and CI workflows across the ecosystem to reference the new `ghcr.io/.../caffeine-build/` container images.
 
+### 4. Documentation & Agent Skills
+- **Common README Header:** Standardized the top common header (logo and status badges) across all repositories. Badges are correctly linked to the respective repository's releases, CI, and commits.
+- **SKILL.md Everywhere:** Created or updated `SKILL.md` in all repositories to provide descriptive, pedantic instructions for future developers and AI coding agents. These files enforce the Caffeine Framework's philosophy, coding standards (C11, Allman style), and the new submodule-based build architecture.
+
 ---
 
 ## Uncertainties and Required Checks

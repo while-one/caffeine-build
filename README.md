@@ -4,6 +4,25 @@
   </a>
 </p>
 
+
+
+<p align="center">
+  <img src="https://img.shields.io/badge/C-11-blue.svg?style=flat-square&logo=c" alt="C11">
+  <img src="https://img.shields.io/badge/CMake-%23008FBA.svg?style=flat-square&logo=cmake&logoColor=white" alt="CMake">
+  <a href="https://github.com/while-one/caffeine-build/tags">
+    <img src="https://img.shields.io/github/v/tag/while-one/caffeine-build?style=flat-square&label=Release" alt="Latest Release">
+  </a>
+  <a href="https://github.com/while-one/caffeine-build/actions/workflows/ci.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/while-one/caffeine-build/ci.yml?style=flat-square&branch=main" alt="CI Status">
+  </a>
+  <a href="https://github.com/while-one/caffeine-build/commits/main">
+    <img src="https://img.shields.io/github/last-commit/while-one/caffeine-build.svg?style=flat-square" alt="Last Commit">
+  </a>
+  <a href="https://github.com/while-one/caffeine-build/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/while-one/caffeine-build?style=flat-square&color=blue" alt="License: MIT">
+  </a>
+</p>
+
 # Caffeine-Build
 
 This repository is the centralized build infrastructure for the **Caffeine Framework** ecosystem. It is designed to be consumed as a Git Submodule by all other repositories in the framework (`caffeine-hal`, `caffeine-hal-ports`, applications, and middleware).

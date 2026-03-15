@@ -13,9 +13,19 @@
 *   `cmake/presets/`: Contains modular `CMakePresets.json` files that define vendor targets (e.g., STM32F407, GD32V).
 *   `cmake/CaffeineMacros.cmake`: Contains utility functions like `cfn_add_firmware()` to automate generating `.hex`/`.bin` files and printing memory sizes.
 *   `scripts/build.sh`: The unified orchestrator script that automatically wraps CMake builds inside Docker containers (for CI parity) or natively.
+*   `Dockerfile` & `.github/workflows/docker-publish.yml`: These files manage the centralized build environment and are used to publish architecture-specific images to the GitHub Container Registry.
 *   `config/`: Contains the global coding standards (`.clang-format` and `.clang-tidy`) shared across the ecosystem.
 
-## 2. Agent Workflow Rules
+## 2. Ecosystem Standards & Documentation
+All Caffeine repositories MUST maintain a consistent visual identity in their `README.md` files.
+
+### A. README Header Mandate
+Every `README.md` must include the standardized Caffeine logo and status badges at the very top. 
+*   **Logo:** Points to `https://whileone.me`.
+*   **Badges:** Must be updated to link to the specific repository where they reside (e.g., tags, CI status, last commit, and license). 
+*   **Never Delete:** Do not remove the header when refactoring or updating documentation.
+
+## 3. Agent Workflow Rules
 
 When you are invoked to work on the build system or an application using it, you **must** adhere to the following rules:
 
