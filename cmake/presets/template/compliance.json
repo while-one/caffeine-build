@@ -1,0 +1,19 @@
+{
+  "version": 4,
+  "include": [
+    "../base.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "template-compliance",
+      "inherits": "base-common",
+      "displayName": "Template Compliance Target",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/template-compliance",
+      "cacheVariables": {
+        "CAFFEINE_VENDOR": "template",
+        "CAFFEINE_PORT_FAMILY": "compliance"
+      }
+    }
+  ]
+}

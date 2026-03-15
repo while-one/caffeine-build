@@ -1,0 +1,20 @@
+{
+  "version": 4,
+  "include": [
+    "../base.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "tests-native",
+      "inherits": "base-common",
+      "displayName": "Host Mock Tests (GoogleTest)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/tests-native",
+      "cacheVariables": {
+        "CAFFEINE_VENDOR": "mock",
+        "CAFFEINE_PORT_FAMILY": "mock-tests",
+        "CAFFEINE_PORT_BUILD_TESTS": "ON"
+      }
+    }
+  ]
+}

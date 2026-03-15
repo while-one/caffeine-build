@@ -1,0 +1,19 @@
+{
+  "version": 4,
+  "include": [
+    "../base.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "linux-native",
+      "inherits": "base-common",
+      "displayName": "Linux Native (POSIX Port)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/linux-native",
+      "cacheVariables": {
+        "CAFFEINE_VENDOR": "linux",
+        "CAFFEINE_PORT_FAMILY": "linux"
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+# Helper macros for the Caffeine Framework
+
+# Macro to generate a firmware memory map, binary, hex, and print the size
+macro(cfn_add_firmware TARGET_NAME)
+    # Check if this is a cross-compiled target (using our toolchains which define CMAKE_OBJCOPY)
+    if(CMAKE_OBJCOPY AND CMAKE_SIZE)
+        # Create a post-build command to output .bin and .hex
+        add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+            COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${TARGET_NAME}> ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.bin
+            COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:${TARGET_NAME}> ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.hex
+            COMMAND ${CMAKE_SIZE} $<TARGET_FILE:${TARGET_NAME}>
+            COMMENT "Generating firmware binaries and calculating size for ${TARGET_NAME}"
+            VERBATIM
+        )
+    endif()
+endmacro()

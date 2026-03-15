@@ -1,0 +1,28 @@
+{
+  "version": 4,
+  "configurePresets": [
+    {
+      "name": "base-common",
+      "hidden": true,
+      "cacheVariables": {
+        "CAFFEINE_WARNINGS_AS_ERRORS": "ON",
+        "CAFFEINE_OPTIMIZATION_LEVEL": "-Os",
+        "CAFFEINE_PORT_BUILD_TESTS": "OFF"
+      }
+    },
+    {
+      "name": "base-arm",
+      "hidden": true,
+      "inherits": "base-common",
+      "generator": "Ninja",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/arm-gcc.cmake"
+    },
+    {
+      "name": "base-riscv",
+      "hidden": true,
+      "inherits": "base-common",
+      "generator": "Ninja",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/riscv-gcc.cmake"
+    }
+  ]
+}
