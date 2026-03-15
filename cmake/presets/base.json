@@ -15,14 +15,14 @@
       "hidden": true,
       "inherits": "base-common",
       "generator": "Ninja",
-      "toolchainFile": "${sourceDir}/cmake/toolchains/arm-gcc.cmake"
+      "toolchainFile": "${sourceDir}/caffeine-build/cmake/toolchains/arm-gcc.cmake"
     },
     {
       "name": "base-riscv",
       "hidden": true,
       "inherits": "base-common",
       "generator": "Ninja",
-      "toolchainFile": "${sourceDir}/cmake/toolchains/riscv-gcc.cmake"
+      "toolchainFile": "${sourceDir}/caffeine-build/cmake/toolchains/riscv-gcc.cmake"
     }
   ]
 }
