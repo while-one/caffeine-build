@@ -16,13 +16,13 @@ else
   STAGE="build-native"
 fi
 
-# The image is built and pushed by the caffeine-hal repository
+# The image is built and pushed by the caffeine-build repository
 REPO_OWNER=${GITHUB_REPOSITORY_OWNER:-while-one}
-IMAGE_NAME="ghcr.io/${REPO_OWNER}/caffeine-hal/$STAGE:latest"
+IMAGE_NAME="ghcr.io/${REPO_OWNER}/caffeine-build/$STAGE:latest"
 
 # Pull the image to ensure it's up-to-date
 echo "Pulling Docker image: $IMAGE_NAME"
-docker pull "$IMAGE_NAME" || { echo "Failed to pull image $IMAGE_NAME. Please ensure it's built and pushed from caffeine-hal."; exit 1; }
+docker pull "$IMAGE_NAME" || { echo "Failed to pull image $IMAGE_NAME. Please ensure it's built and pushed from caffeine-build."; exit 1; }
 
 # Check if we should use presets or standard build
 if [[ "$PRESET_OR_STAGE" == *"native"* && ! -f "CMakePresets.json" ]]; then
