@@ -4,6 +4,14 @@
 macro(cfn_add_firmware TARGET_NAME)
     # Check if this is a cross-compiled target (using our toolchains which define CMAKE_OBJCOPY)
     if(CMAKE_OBJCOPY AND CMAKE_SIZE)
+        # 1. Enforce the .elf suffix for the executable
+        set_target_properties(${TARGET_NAME} PROPERTIES SUFFIX ".elf")
+
+        # 2. Inject the linker flag to generate the .map file in the app's directory
+        target_link_options(${TARGET_NAME} PRIVATE
+            "-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.map"
+        )
+
         # Create a post-build command to output .bin and .hex
         add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
             COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${TARGET_NAME}> ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.bin
