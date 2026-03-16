@@ -15,7 +15,7 @@
         "CAFFEINE_PORT_FAMILY": "gd32v",
         "CAFFEINE_MCU_ARCH": "rv32imac",
         "CAFFEINE_MCU_ABI": "ilp32",
-        "CAFFEINE_BOARD_LINKER": "GD32VF103_FLASH.ld"
+        "CAFFEINE_LINKER_SCRIPT": "GD32VF103_FLASH.ld"
       }
     },
     {
@@ -30,7 +30,7 @@
         "CAFFEINE_MCU_ARCH": "rv32imac",
         "CAFFEINE_MCU_ABI": "ilp32",
         "CAFFEINE_BOOTLOADER_SIZE_HEX": "0x4000",
-        "CAFFEINE_BOARD_LINKER": "GD32VF103_FLASH.ld"
+        "CAFFEINE_LINKER_SCRIPT": "GD32VF103_FLASH.ld"
       }
     }
   ]

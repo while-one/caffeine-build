@@ -61,7 +61,7 @@
         "CAFFEINE_MCU_CORE": "cortex-m4",
         "CAFFEINE_MCU_COMPILE_OPTIONS": "-mfloat-abi=hard -mfpu=fpv4-sp-d16",
         "CAFFEINE_MCU_MACRO": "STM32F417xx",
-        "CAFFEINE_BOARD_LINKER": "STM32F417VGTX_FLASH.ld"
+        "CAFFEINE_LINKER_SCRIPT": "STM32F417VGTX_FLASH.ld"
       }
     },
     {
@@ -79,7 +79,7 @@
         "CAFFEINE_MCU_CORE": "cortex-m4",
         "CAFFEINE_MCU_COMPILE_OPTIONS": "-mfloat-abi=hard -mfpu=fpv4-sp-d16",
         "CAFFEINE_MCU_MACRO": "STM32F407xx",
-        "CAFFEINE_BOARD_LINKER": "STM32F407VGTX_FLASH.ld"
+        "CAFFEINE_LINKER_SCRIPT": "STM32F407VGTX_FLASH.ld"
       }
     },
     {
@@ -98,7 +98,7 @@
         "CAFFEINE_MCU_COMPILE_OPTIONS": "-mfloat-abi=hard -mfpu=fpv4-sp-d16",
         "CAFFEINE_MCU_MACRO": "STM32F407xx",
         "CAFFEINE_BOOTLOADER_SIZE_HEX": "0x8000",
-        "CAFFEINE_BOARD_LINKER": "STM32F407VGTX_FLASH.ld"
+        "CAFFEINE_LINKER_SCRIPT": "STM32F407VGTX_FLASH.ld"
       }
     }
   ]
