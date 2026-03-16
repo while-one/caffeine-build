@@ -18,14 +18,14 @@ fi
 EXTRA_ARGS=("$@")
 
 # --- 2. Architecture Detection ---
-# Map preset/stage keywords to the correct specialized Docker image
-if [[ "$PRESET" == *"arm"* || "$PRESET" == *"stm32"* ]]; then
-    STAGE="build-arm"
-elif [[ "$PRESET" == *"riscv"* || "$PRESET" == *"gd32"* ]]; then
-    STAGE="build-riscv"
-else
-    STAGE="build-native"
+# Extract the specialized Docker image stage from the preset's cache variables.
+# We leverage the "Hardware Contract" (CAFFEINE_BUILD_STAGE) defined in base presets.
+if [ -f "CMakePresets.json" ]; then
+    STAGE=$(cmake --preset "$PRESET" -N 2>/dev/null | grep "CAFFEINE_BUILD_STAGE" | cut -d'=' -f2 | tr -d '"' | xargs)
 fi
+
+# Default to build-native if no specialized stage is defined in the preset
+STAGE="${STAGE:-build-native}"
 
 REPO_OWNER="${GITHUB_REPOSITORY_OWNER:-while-one}"
 IMAGE_NAME="ghcr.io/${REPO_OWNER}/caffeine-build/${STAGE}:latest"
