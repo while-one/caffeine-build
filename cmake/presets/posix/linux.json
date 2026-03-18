@@ -11,8 +11,8 @@
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/linux-native",
       "cacheVariables": {
-        "CAFFEINE_VENDOR": "linux",
-        "CAFFEINE_PORT_FAMILY": "linux"
+        "CFN_HAL_PORT_VENDOR": "linux",
+        "CFN_HAL_PORT_FAMILY": "linux"
       }
     }
   ]

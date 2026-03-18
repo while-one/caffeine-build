@@ -11,8 +11,8 @@
       "binaryDir": "${sourceDir}/build/gd32vf103-release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CAFFEINE_VENDOR": "gigadevice",
-        "CAFFEINE_PORT_FAMILY": "gd32v",
+        "CFN_HAL_PORT_VENDOR": "gigadevice",
+        "CFN_HAL_PORT_FAMILY": "gd32v",
         "CAFFEINE_MCU_ARCH": "rv32imac",
         "CAFFEINE_MCU_ABI": "ilp32",
         "CAFFEINE_LINKER_SCRIPT": "GD32VF103_FLASH.ld"
@@ -25,8 +25,8 @@
       "binaryDir": "${sourceDir}/build/gd32vf103-bootloader",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CAFFEINE_VENDOR": "gigadevice",
-        "CAFFEINE_PORT_FAMILY": "gd32v",
+        "CFN_HAL_PORT_VENDOR": "gigadevice",
+        "CFN_HAL_PORT_FAMILY": "gd32v",
         "CAFFEINE_MCU_ARCH": "rv32imac",
         "CAFFEINE_MCU_ABI": "ilp32",
         "CAFFEINE_BOOTLOADER_SIZE_HEX": "0x4000",

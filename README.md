@@ -60,8 +60,8 @@ To use this build system in a new Caffeine application:
           "name": "app-stm32f407",
           "inherits": "base-arm",
           "cacheVariables": {
-            "CAFFEINE_VENDOR": "stm32",
-            "CAFFEINE_PORT_FAMILY": "stm32f4",
+            "CFN_HAL_PORT_VENDOR": "stm32",
+            "CFN_HAL_PORT_FAMILY": "stm32f4",
             "CAFFEINE_MCU_MACRO": "STM32F407xx",
             "CAFFEINE_BOARD_LINKER": "STM32F407VGTX_FLASH.ld"
           }

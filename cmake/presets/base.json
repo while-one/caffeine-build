@@ -7,7 +7,6 @@
       "cacheVariables": {
         "CAFFEINE_WARNINGS_AS_ERRORS": "ON",
         "CAFFEINE_OPTIMIZATION_LEVEL": "-Os",
-        "CAFFEINE_PORT_BUILD_TESTS": "OFF",
         "CAFFEINE_BUILD_STAGE": "build-native"
       }
     },
