@@ -11,8 +11,8 @@
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/template-compliance",
       "cacheVariables": {
-        "CAFFEINE_VENDOR": "template",
-        "CAFFEINE_PORT_FAMILY": "compliance"
+        "CFN_HAL_PORT_VENDOR": "template",
+        "CFN_HAL_PORT_FAMILY": "compliance"
       }
     }
   ]

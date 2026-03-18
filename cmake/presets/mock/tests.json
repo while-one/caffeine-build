@@ -11,9 +11,8 @@
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/tests-native",
       "cacheVariables": {
-        "CAFFEINE_VENDOR": "mock",
-        "CAFFEINE_PORT_FAMILY": "mock-tests",
-        "CAFFEINE_PORT_BUILD_TESTS": "ON"
+        "CFN_HAL_PORT_VENDOR": "mock",
+        "CFN_HAL_PORT_FAMILY": "mock-tests"
       }
     }
   ]
