@@ -39,34 +39,6 @@
       }
     },
     {
-      "name": "base-hardware-defaults",
-      "hidden": true,
-      "cacheVariables": {
-        "CFN_HAL_ADC": "OFF",
-        "CFN_HAL_CAN": "OFF",
-        "CFN_HAL_CLOCK": "OFF",
-        "CFN_HAL_COMP": "OFF",
-        "CFN_HAL_CRYPTO": "OFF",
-        "CFN_HAL_DAC": "OFF",
-        "CFN_HAL_DMA": "OFF",
-        "CFN_HAL_ETH": "OFF",
-        "CFN_HAL_GPIO": "OFF",
-        "CFN_HAL_I2C": "OFF",
-        "CFN_HAL_I2S": "OFF",
-        "CFN_HAL_IRQ": "OFF",
-        "CFN_HAL_NVM": "OFF",
-        "CFN_HAL_PWM": "OFF",
-        "CFN_HAL_QSPI": "OFF",
-        "CFN_HAL_RTC": "OFF",
-        "CFN_HAL_SDIO": "OFF",
-        "CFN_HAL_SPI": "OFF",
-        "CFN_HAL_TIMER": "OFF",
-        "CFN_HAL_UART": "OFF",
-        "CFN_HAL_USB": "OFF",
-        "CFN_HAL_WDT": "OFF"
-      }
-    },
-    {
       "name": "base-arm",
       "hidden": true,
       "inherits": "base-common",
