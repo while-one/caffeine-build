@@ -22,3 +22,14 @@ macro(cfn_add_firmware TARGET_NAME)
         )
     endif()
 endmacro()
+
+# Macro to parse the CFN_APP_DIRECT_IRQ list and apply the corresponding
+# CFN_HAL_PORT_DISABLE_IRQ_<PERIPH> definitions to the specified target.
+function(cfn_apply_direct_irq TARGET_NAME)
+    if(DEFINED CFN_APP_DIRECT_IRQ)
+        foreach(PERIPH IN LISTS CFN_APP_DIRECT_IRQ)
+            string(TOUPPER "${PERIPH}" PERIPH_UPPER)
+            target_compile_definitions(${TARGET_NAME} PUBLIC CFN_HAL_PORT_DISABLE_IRQ_${PERIPH_UPPER})
+        endforeach()
+    endif()
+endfunction()
