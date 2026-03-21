@@ -11,7 +11,7 @@
 ### Directory Structure
 *   `cmake/toolchains/`: Contains cross-compiler definitions (e.g., `arm-gcc.cmake`, `riscv-gcc.cmake`). *Note: These files define **how** to compile, but must remain agnostic to specific silicon cores.*
 *   `cmake/presets/`: Contains modular `CMakePresets.json` files that define vendor targets (e.g., STM32F407, GD32V).
-*   `cmake/CaffeineMacros.cmake`: Contains utility functions like `cfn_add_firmware()` to automate generating `.hex`/`.bin` files and printing memory sizes.
+*   `cmake/CaffeineMacros.cmake`: Contains global compiler options (e.g., `-Werror`, strict standard enforcement) to be reused by all consuming repositories, and utility functions like `cfn_add_firmware()` to automate generating `.hex`/`.bin` files and printing memory sizes.
 *   `scripts/build.sh`: The unified orchestrator script that automatically wraps CMake builds inside Docker containers (for CI parity) or natively.
 *   `Dockerfile` & `.github/workflows/docker-publish.yml`: These files manage the centralized build environment and are used to publish architecture-specific images to the GitHub Container Registry.
 *   `config/`: Contains the global coding standards (`.clang-format` and `.clang-tidy`) shared across the ecosystem.
@@ -36,6 +36,7 @@ When you are invoked to work on the build system or an application using it, you
 ### B. CMake Constraints
 *   **Preset Composition:** Applications define their own local `CMakePresets.json` which `include`s the required base preset from `caffeine-build`, and then creates a local preset inheriting from it to set the `CAFFEINE_MCU_MACRO` or `CAFFEINE_BOARD_LINKER`.
 *   **Linker Script Resolution:** The linker scripts themselves live in `caffeine-hal-ports/linker/`. The generic presets in `caffeine-build` only define the filename (`CAFFEINE_BOARD_LINKER`). The `caffeine-hal-ports` CMake recipe is responsible for injecting the absolute path to that linker script via `target_link_options`.
+*   **Global Compiler Options:** Applications and libraries MUST include `caffeine-build/cmake/CaffeineMacros.cmake` and apply `CAFFEINE_COMPILE_OPTIONS` to their targets to inherit the ecosystem's strict warning and optimization flags.
 
 ### C. Build Script Execution
 *   When testing builds locally or in CI instructions, use the unified script located at the submodule path: `./caffeine-build/scripts/build.sh <preset_name> <cmake_target>`.
