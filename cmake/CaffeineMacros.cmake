@@ -1,4 +1,31 @@
-# Helper macros for the Caffeine Framework
+# Helper macros and shared build configurations for the Caffeine Framework
+
+# ==============================================================================
+# Global Compiler Options
+# ==============================================================================
+
+# User-configurable flags (with sensible defaults)
+option(CAFFEINE_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" ON)
+set(CAFFEINE_OPTIMIZATION_LEVEL "-Os" CACHE STRING "Compiler optimization level (e.g., -O0, -O2, -Os, -O3)")
+
+# Universal strict warnings and preparation for dead-code elimination
+set(CAFFEINE_COMPILE_OPTIONS
+        -pedantic-errors
+        -Wall -Wextra -Wpedantic -Wshadow
+        -ffunction-sections -fdata-sections
+        $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>
+        $<$<COMPILE_LANGUAGE:C>:-Wmissing-prototypes>
+        $<$<COMPILE_LANGUAGE:C>:-Wmissing-declarations>
+        ${CAFFEINE_OPTIMIZATION_LEVEL}
+)
+
+if(CAFFEINE_WARNINGS_AS_ERRORS)
+    list(APPEND CAFFEINE_COMPILE_OPTIONS -Werror)
+endif()
+
+# ==============================================================================
+# Helper Macros
+# ==============================================================================
 
 # Macro to generate a firmware memory map, binary, hex, and print the size
 macro(cfn_add_firmware TARGET_NAME)

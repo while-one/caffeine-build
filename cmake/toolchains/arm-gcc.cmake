@@ -10,18 +10,20 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 # Bare-metal ARM GCC defaults: Use newlib-nano, stub syscalls, and garbage collect dead sections
 set(CMAKE_EXE_LINKER_FLAGS_INIT "-Wl,--gc-sections --specs=nano.specs --specs=nosys.specs -Wl,--print-memory-usage")
 
+set(CAFFEINE_TOOLCHAIN_PREFIX "arm-none-eabi-" CACHE STRING "Compiler toolchain prefix")
+
 # Locate toolchain executables dynamically from the system PATH
-find_program(CMAKE_C_COMPILER arm-none-eabi-gcc REQUIRED)
-find_program(CMAKE_CXX_COMPILER arm-none-eabi-g++ REQUIRED)
-find_program(CMAKE_ASM_COMPILER arm-none-eabi-gcc REQUIRED)
+find_program(CMAKE_C_COMPILER ${CAFFEINE_TOOLCHAIN_PREFIX}gcc REQUIRED)
+find_program(CMAKE_CXX_COMPILER ${CAFFEINE_TOOLCHAIN_PREFIX}g++ REQUIRED)
+find_program(CMAKE_ASM_COMPILER ${CAFFEINE_TOOLCHAIN_PREFIX}gcc REQUIRED)
 
 # Locate useful binary utilities for post-build steps
-find_program(CMAKE_OBJCOPY arm-none-eabi-objcopy REQUIRED)
-find_program(CMAKE_OBJDUMP arm-none-eabi-objdump REQUIRED)
-find_program(CMAKE_SIZE arm-none-eabi-size REQUIRED)
-find_program(CMAKE_STRIP arm-none-eabi-strip REQUIRED)
-find_program(CMAKE_AR arm-none-eabi-ar REQUIRED)
-find_program(CMAKE_RANLIB arm-none-eabi-ranlib REQUIRED)
+find_program(CMAKE_OBJCOPY ${CAFFEINE_TOOLCHAIN_PREFIX}objcopy REQUIRED)
+find_program(CMAKE_OBJDUMP ${CAFFEINE_TOOLCHAIN_PREFIX}objdump REQUIRED)
+find_program(CMAKE_SIZE ${CAFFEINE_TOOLCHAIN_PREFIX}size REQUIRED)
+find_program(CMAKE_STRIP ${CAFFEINE_TOOLCHAIN_PREFIX}strip REQUIRED)
+find_program(CMAKE_AR ${CAFFEINE_TOOLCHAIN_PREFIX}ar REQUIRED)
+find_program(CMAKE_RANLIB ${CAFFEINE_TOOLCHAIN_PREFIX}ranlib REQUIRED)
 
 # Bypass compile checks that require a fully linked executable
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
