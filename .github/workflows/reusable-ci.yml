@@ -1,0 +1,16 @@
+name: Framework CI
+
+on:
+  workflow_call:
+
+jobs:
+  unified-ci:
+    name: Framework Unified Quality Gate
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Run Unified CI Script
+        run: chmod +x ./caffeine-build/scripts/*.sh && ./caffeine-build/scripts/ci.sh
