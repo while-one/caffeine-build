@@ -1,9 +1,11 @@
 <p align="center">
-    <img src="./assets/logo.png" alt="Caffeine Logo" width="50%">
+  <a href="https://whileone.me">
+    <img src="https://raw.githubusercontent.com/while-one/caffeine-build/main/assets/logo.png" alt="Caffeine Logo" width="50%">
+  </a>
 <h1 align="center">The Caffeine Framework</h1>
 </p>
 
-
+# Caffeine-Build
 
 <p align="center">
   <img src="https://img.shields.io/badge/C-11-blue.svg?style=flat-square&logo=c" alt="C11">
@@ -21,8 +23,6 @@
     <img src="https://img.shields.io/github/license/while-one/caffeine-build?style=flat-square&color=blue" alt="License: MIT">
   </a>
 </p>
-
-# Caffeine-Build
 
 This repository is the centralized build infrastructure for the **Caffeine Framework** ecosystem. It is designed to be consumed as a Git Submodule by all other repositories in the framework (`caffeine-hal`, `caffeine-hal-ports`, applications, and middleware).
 

@@ -39,5 +39,8 @@ When you are invoked to work on the build system or an application using it, you
 *   **Global Compiler Options:** Applications and libraries MUST include `caffeine-build/cmake/CaffeineMacros.cmake` and apply `CAFFEINE_COMPILE_OPTIONS` to their targets to inherit the ecosystem's strict warning and optimization flags.
 
 ### C. Build Script Execution
-*   When testing builds locally or in CI instructions, use the unified script located at the submodule path: `./caffeine-build/scripts/build.sh <preset_name> <cmake_target>`.
+*   When testing builds locally or in CI instructions, use the unified script located at the submodule path: `./caffeine-build/scripts/build.sh [--clean] <preset_name> <cmake_target>`.
+*   **Incremental Builds:** The script persists the `build/` directory between runs.
+*   **Clean Builds:** Use the `--clean` flag to force a full re-configuration and re-build.
 *   Example: `./caffeine-build/scripts/build.sh linux-native caffeine-hal-ports-format`
+*   Example (Clean): `./caffeine-build/scripts/build.sh --clean unit-tests-gtest all`

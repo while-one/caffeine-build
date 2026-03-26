@@ -2,39 +2,66 @@
 set -e
 
 # ==============================================================================
-# Caffeine Framework Unified Build Orchestrator (Final Clean Version)
+# Caffeine Framework Unified Build Orchestrator (Refactored)
 # ==============================================================================
 
 # --- 1. Configuration & Defaults ---
-PRESET="${1:-linux-native}"
-TARGET="${2:-all}"
+CLEAN_BUILD=false
+PRESET=""
+TARGET=""
+EXTRA_ARGS=()
 
-# Shift to capture any remaining arguments as extra CMake flags
-if [ "$#" -ge 2 ]; then
-    shift 2
-elif [ "$#" -ge 1 ]; then
-    shift 1
-fi
-EXTRA_ARGS=("$@")
+# Parse arguments
+while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+        --clean) CLEAN_BUILD=true ;;
+        -*) EXTRA_ARGS+=("$1") ;;
+        *)
+            if [ -z "$PRESET" ]; then
+                PRESET="$1"
+            elif [ -z "$TARGET" ]; then
+                TARGET="$1"
+            else
+                EXTRA_ARGS+=("$1")
+            fi
+            ;;
+    esac
+    shift
+done
+
+# Set defaults if not provided
+PRESET="${PRESET:-linux-native}"
+TARGET="${TARGET:-all}"
 
 # --- 2. Architecture Detection ---
-# Extract the specialized Docker image stage from the preset's cache variables.
-# We leverage the "Hardware Contract" (CAFFEINE_BUILD_STAGE) defined in base presets.
+# Extract specialized Docker image stage and binary directory from the preset.
 if [ -f "CMakePresets.json" ]; then
-    STAGE=$(cmake --preset "$PRESET" -N 2>/dev/null | grep "CAFFEINE_BUILD_STAGE" | cut -d'=' -f2 | tr -d '"' | xargs)
+    PRESET_INFO=$(cmake --preset "$PRESET" -N 2>/dev/null)
+    STAGE=$(echo "$PRESET_INFO" | grep "CAFFEINE_BUILD_STAGE" | cut -d'=' -f2 | tr -d '"' | xargs)
+    BINARY_DIR=$(echo "$PRESET_INFO" | grep "binaryDir" | cut -d'=' -f2 | tr -d '"' | xargs)
 fi
 
-# Default to build-native if no specialized stage is defined in the preset
+# Fallback defaults
 STAGE="${STAGE:-build-native}"
+BINARY_DIR="${BINARY_DIR:-build/$PRESET}"
+
+# Convert relative BINARY_DIR to absolute path relative to /work for the build command
+# If BINARY_DIR is absolute (starts with /), we assume it's already mapped or correct.
+# However, CMakePresets usually use ${sourceDir}, which becomes /work in the container.
+if [[ "$BINARY_DIR" != /* ]]; then
+    BINARY_DIR="/work/$BINARY_DIR"
+fi
 
 REPO_OWNER="${GITHUB_REPOSITORY_OWNER:-while-one}"
 IMAGE_NAME="ghcr.io/${REPO_OWNER}/caffeine-build/${STAGE}:latest"
 
 # --- 3. Environment Preparation ---
 echo "--------------------------------------------------------------------------------"
-echo " Image:  $IMAGE_NAME"
-echo " Preset: $PRESET"
-echo " Target: $TARGET"
+echo " Image:      $IMAGE_NAME"
+echo " Preset:     $PRESET"
+echo " Target:     $TARGET"
+echo " Binary Dir: $BINARY_DIR"
+echo " Clean:      $CLEAN_BUILD"
 echo "--------------------------------------------------------------------------------"
 
 # Ensure we have the latest infrastructure image
@@ -48,7 +75,7 @@ docker pull "$IMAGE_NAME" || {
 if [ -f "CMakePresets.json" ]; then
     # Modern Preset-based Workflow
     CMD="cmake --preset $PRESET ${EXTRA_ARGS[*]} && \
-         cmake --build build/$PRESET --target $TARGET"
+         cmake --build $BINARY_DIR --target $TARGET"
 else
     # Standard Native Workflow
     CMD="cmake -B build -DFETCHCONTENT_FULLY_DISCONNECTED=OFF ${EXTRA_ARGS[*]} && \
@@ -58,9 +85,15 @@ fi
 # --- 5. Execution (Containerized) ---
 # We use --user to ensure files created in the volume match the host user's UID/GID
 # this prevents "permission denied" or "git ownership" errors during FetchContent.
+CLEAN_CMD=""
+if [ "$CLEAN_BUILD" = true ]; then
+    # We clean the local 'build' dir if it exists, or the specific BINARY_DIR if it's relative
+    CLEAN_CMD="rm -rf build ${BINARY_DIR#/work/} && "
+fi
+
 docker run --rm \
     --user "$(id -u):$(id -g)" \
     -v "$(pwd)":/work \
     -w /work \
     "$IMAGE_NAME" \
-    bash -c "rm -rf build && $CMD"
+    bash -c "${CLEAN_CMD}$CMD"
