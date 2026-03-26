@@ -60,3 +60,33 @@ function(cfn_apply_direct_irq TARGET_NAME)
         endforeach()
     endif()
 endfunction()
+
+# Function to retrieve system include paths from the compiler and format them
+# as --extra-arg flags for clang-tidy. This is essential for cross-compilation
+# where clang-tidy cannot natively find the toolchain headers.
+function(cfn_get_clang_tidy_extra_args OUT_VAR)
+    set(EXTRA_ARGS "")
+    if(CMAKE_CROSSCOMPILING)
+        # We query the compiler for its default include paths using verbose preprocessor output
+        execute_process(
+            COMMAND ${CMAKE_C_COMPILER} -E -Wp,-v -xc /dev/null
+            ERROR_VARIABLE COMPILER_VERBOSE_OUTPUT
+            OUTPUT_QUIET
+        )
+        string(REPLACE "\n" ";" COMPILER_LINES "${COMPILER_VERBOSE_OUTPUT}")
+        set(IS_INSIDE_INCLUDE_BLOCK FALSE)
+        foreach(LINE ${COMPILER_LINES})
+            if(LINE MATCHES "#include <...>")
+                set(IS_INSIDE_INCLUDE_BLOCK TRUE)
+            elseif(LINE MATCHES "End of search list")
+                set(IS_INSIDE_INCLUDE_BLOCK FALSE)
+            elseif(IS_INSIDE_INCLUDE_BLOCK)
+                string(STRIP "${LINE}" SYSTEM_PATH)
+                if(EXISTS "${SYSTEM_PATH}")
+                    list(APPEND EXTRA_ARGS "--extra-arg=-isystem${SYSTEM_PATH}")
+                endif()
+            endif()
+        endforeach()
+    endif()
+    set(${OUT_VAR} "${EXTRA_ARGS}" PARENT_SCOPE)
+endfunction()
