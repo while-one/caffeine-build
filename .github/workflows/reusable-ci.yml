@@ -2,6 +2,12 @@ name: Framework CI
 
 on:
   workflow_call:
+    inputs:
+      submodules:
+        description: 'Submodule checkout strategy (recursive, true, false)'
+        required: false
+        default: 'recursive'
+        type: string
 
 jobs:
   unified-ci:
@@ -10,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: ${{ inputs.submodules }}
 
       - name: Run Unified CI Script
         run: chmod +x ./caffeine-build/scripts/*.sh && ./caffeine-build/scripts/ci.sh
