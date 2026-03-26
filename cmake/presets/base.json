@@ -11,6 +11,17 @@
       }
     },
     {
+      "name": "unit-tests-gtest",
+      "displayName": "Caffeine Unit Tests (Native Host)",
+      "description": "Standardized unit test configuration using the host compiler",
+      "inherits": "base-common",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/unit-tests-gtest",
+      "cacheVariables": {
+        "CFN_BUILD_TESTS": "ON"
+      }
+    },
+    {
       "name": "base-hardware-defaults",
       "hidden": true,
       "cacheVariables": {
@@ -56,6 +67,15 @@
       "toolchainFile": "${sourceDir}/caffeine-build/cmake/toolchains/riscv-gcc.cmake",
       "cacheVariables": {
         "CAFFEINE_BUILD_STAGE": "build-riscv"
+      }
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "unit-tests-gtest",
+      "configurePreset": "unit-tests-gtest",
+      "output": {
+        "outputOnFailure": true
       }
     }
   ]

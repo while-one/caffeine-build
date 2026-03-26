@@ -30,56 +30,48 @@ This repository is the centralized build infrastructure for the **Caffeine Frame
 
 By decoupling the build system from the code repositories, `caffeine-build` ensures:
 1.  **Single Source of Truth:** CMake toolchains, hardware presets, and common macros are defined once.
-2.  **IDE Compatibility:** Because it is cloned as a submodule before CMake runs, `CMakePresets.json` in consuming repositories can reliably inherit from `caffeine-build/cmake/presets/base-arm.json` without parsing errors in IDEs like CLion or VSCode.
-3.  **Unified Build Scripts:** A single `scripts/build.sh` script orchestrates Dockerized or native cross-compilation identically across all projects.
+2.  **IDE Compatibility:** Because it is cloned as a submodule before CMake runs, `CMakePresets.json` in consuming repositories can reliably inherit from `caffeine-build/cmake/presets/base.json`.
+3.  **Unified Build Orchestration:** A standardized set of scripts (`build.sh`, `ci.sh`) ensures identical build and quality gate behavior locally and in CI.
 
 ## Directory Structure
 
 *   `cmake/toolchains/`: Cross-compiler definitions (e.g., `arm-gcc.cmake`, `riscv-gcc.cmake`).
-*   `cmake/presets/`: Modular `CMakePresets.json` files for vendor targets (e.g., STM32F407, GD32V).
-*   `cmake/CaffeineMacros.cmake`: Helper functions (e.g., `cfn_add_firmware()`) to automate `.hex`/`.bin` generation.
-*   `scripts/build.sh`: Unified build orchestrator.
-*   `config/coding/`: Global coding standards (`.clang-format` and `.clang-tidy`).
+*   `cmake/presets/`: Centralized `base.json` containing shared configuration and test presets (`unit-tests-gtest`).
+*   `cmake/CaffeineMacros.cmake`: Reusable functions (e.g., `cfn_add_firmware()`, `cfn_get_clang_tidy_extra_args()`).
+*   `scripts/build.sh`: Main build orchestrator supporting incremental builds and custom binary dirs.
+*   `scripts/ci.sh`: Unified CI script that validates all presets in a project.
+*   `config/coding/`: Global coding standards (`.clang-format`, `.clang-tidy`, `cppcheck-suppressions.txt`).
+
+## Standardized Quality Gates
+
+The repository provides two primary scripts for local and CI development:
+- **`scripts/build.sh`**: Orchestrates builds for specific presets and targets.
+- **`scripts/ci.sh`**: The unified quality gate. It discovers all non-hidden presets and runs:
+  1. **Format Check:** Dry-run validation of coding style.
+  2. **Static Analysis:** Deep analysis via `clang-tidy` and `cppcheck` (Fail-on-warning).
+  3. **Compilation:** Full build of all targets.
+  4. **Unit Tests:** Automated execution via `ctest` for test-enabled presets.
 
 ## Usage in Applications
 
-To use this build system in a new Caffeine application:
-
-1.  Add this repository as a submodule:
-    ```bash
-    git submodule add https://github.com/while-one/caffeine-build.git caffeine-build
-    ```
-2.  Create a local `CMakePresets.json` that inherits from a build preset:
+1.  Add this repository as a submodule: `git submodule add https://github.com/while-one/caffeine-build.git caffeine-build`
+2.  Inherit from `base.json` in your local `CMakePresets.json`:
     ```json
     {
-      "version": 4,
-      "include": ["caffeine-build/cmake/presets/base-arm.json"],
+      "include": ["caffeine-build/cmake/presets/base.json"],
       "configurePresets": [
         {
-          "name": "app-stm32f407",
+          "name": "my-target",
           "inherits": "base-arm",
           "cacheVariables": {
             "CFN_HAL_PORT_VENDOR": "stm32",
             "CFN_HAL_PORT_FAMILY": "stm32f4",
-            "CAFFEINE_MCU_MACRO": "STM32F407xx",
-            "CAFFEINE_BOARD_LINKER": "STM32F407VGTX_FLASH.ld"
+            "CFN_HAL_PORT_TARGET": "stm32f417vgtx"
           }
         }
       ]
     }
     ```
-3.  Load the macros in your `CMakeLists.txt`:
-    ```cmake
-    include(caffeine-build/cmake/CaffeineMacros.cmake)
-    # ... your targets ...
-    cfn_add_firmware(my_target)
-    ```
-
-## Shared Ecosystem Standards
-
-All repositories using `caffeine-build` inherit the framework's strict coding standards via the `config/` directory:
-*   **Formatting:** Enforces a 120-column limit, 4-space indentation, and Allman-style braces.
-*   **Static Analysis:** Enforces strict C11 compliance, memory safety rules (no dynamic allocation).
 
 ---
 

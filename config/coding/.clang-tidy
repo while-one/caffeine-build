@@ -14,7 +14,7 @@ Checks: >
   -bugprone-easily-swappable-parameters
 
 # Warnings as errors ensures you don't ignore these in CI
-WarningsAsErrors: 'readability-identifier-naming,bugprone-narrowing-conversions'
+WarningsAsErrors: '*'
 
 CheckOptions:
   # --- BARR-C Rule 2.1: Naming Conventions ---

@@ -23,6 +23,18 @@ if(CAFFEINE_WARNINGS_AS_ERRORS)
     list(APPEND CAFFEINE_COMPILE_OPTIONS -Werror)
 endif()
 
+# Global cppcheck flags for consistent static analysis across the framework.
+# We fail the build on any warning (--error-exitcode=1) and use a centralized
+# suppressions list located in caffeine-build.
+set(CFN_CPPCHECK_FLAGS
+    --enable=all
+    --error-exitcode=1
+    --inline-suppr
+    --std=c11
+    --suppressions-list=${PROJECT_SOURCE_DIR}/caffeine-build/config/coding/cppcheck-suppressions.txt
+    --suppress=unmatchedSuppression
+)
+
 # ==============================================================================
 # Helper Macros
 # ==============================================================================

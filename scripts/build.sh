@@ -74,12 +74,20 @@ docker pull "$IMAGE_NAME" || {
 # We use an array to maintain proper quoting when passing to bash -c
 if [ -f "CMakePresets.json" ]; then
     # Modern Preset-based Workflow
-    CMD="cmake --preset $PRESET ${EXTRA_ARGS[*]} && \
-         cmake --build $BINARY_DIR --target $TARGET"
+    if [ "$TARGET" == "ctest" ]; then
+        CMD="ctest --preset $PRESET --output-on-failure"
+    else
+        CMD="cmake --preset $PRESET ${EXTRA_ARGS[*]} && \
+             cmake --build $BINARY_DIR --target $TARGET"
+    fi
 else
     # Standard Native Workflow
-    CMD="cmake -B build -DFETCHCONTENT_FULLY_DISCONNECTED=OFF ${EXTRA_ARGS[*]} && \
-         cmake --build build --target $TARGET"
+    if [ "$TARGET" == "ctest" ]; then
+        CMD="cd build && ctest --output-on-failure"
+    else
+        CMD="cmake -B build -DFETCHCONTENT_FULLY_DISCONNECTED=OFF ${EXTRA_ARGS[*]} && \
+             cmake --build build --target $TARGET"
+    fi
 fi
 
 # --- 5. Execution (Containerized) ---
