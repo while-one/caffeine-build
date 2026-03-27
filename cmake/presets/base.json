@@ -12,6 +12,7 @@
     },
     {
       "name": "base-unit-tests-gtest",
+      "hidden": true,
       "displayName": "Caffeine Unit Tests (Native Host)",
       "description": "Standardized unit test configuration using the host compiler",
       "inherits": "base-common",
@@ -72,8 +73,9 @@
   ],
   "testPresets": [
     {
-      "name": "unit-tests-gtest",
-      "configurePreset": "unit-tests-gtest",
+      "name": "base-unit-tests-gtest",
+      "hidden": true,
+      "configurePreset": "base-unit-tests-gtest",
       "output": {
         "outputOnFailure": true
       }
