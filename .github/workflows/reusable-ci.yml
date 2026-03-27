@@ -79,10 +79,11 @@ jobs:
       fail-fast: false
       matrix:
         preset: ${{ fromJson(needs.discover.outputs.matrix) }}
-    if: ${{ matrix.preset.tests }}
     steps:
       - uses: actions/checkout@v4
+        if: ${{ matrix.preset.tests }}
         with:
           submodules: ${{ inputs.submodules }}
       - name: Run Unit Tests
+        if: ${{ matrix.preset.tests }}
         run: ./caffeine-build/scripts/ci.sh test ${{ matrix.preset.name }}
