@@ -11,12 +11,13 @@
       }
     },
     {
-      "name": "unit-tests-gtest",
+      "name": "base-unit-tests-gtest",
+      "hidden": true,
       "displayName": "Caffeine Unit Tests (Native Host)",
       "description": "Standardized unit test configuration using the host compiler",
       "inherits": "base-common",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build/${presetName}",
+      "binaryDir": "${sourceDir}/build/unit-tests-gtest",
       "cacheVariables": {
         "CFN_BUILD_TESTS": "ON"
       }
