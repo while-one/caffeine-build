@@ -36,7 +36,8 @@ When you are invoked to work on the build system or an application using it, you
 ### B. CMake Constraints
 *   **Preset Composition:** Applications define their own local `CMakePresets.json` which `include`s the required base preset from `caffeine-build`, and then creates a local preset inheriting from it to set the `CAFFEINE_MCU_MACRO` or `CAFFEINE_BOARD_LINKER`.
 *   **Linker Script Resolution:** The linker scripts themselves live in `caffeine-hal-ports/linker/`. The generic presets in `caffeine-build` only define the filename (`CAFFEINE_BOARD_LINKER`). The `caffeine-hal-ports` CMake recipe is responsible for injecting the absolute path to that linker script via `target_link_options`.
-*   **Global Compiler Options:** Applications and libraries MUST include `caffeine-build/cmake/CaffeineMacros.cmake` and apply `CAFFEINE_COMPILE_OPTIONS` to their targets to inherit the ecosystem's strict warning and optimization flags.
+*   **Global Compiler Options:** Applications and libraries MUST include `caffeine-build/cmake/CaffeineMacros.cmake` and apply `CAFFEINE_COMPILE_OPTIONS` to their targets. They should also use `cfn_add_code_quality_targets()` to ensure ecosystem-wide analysis parity.
+*   **Unit Testing:** The `base-unit-tests-gtest` preset in `base.json` provides the foundation for host testing. Consuming repositories must define their own `unit-tests-gtest` preset inheriting from it.
 
 ### C. Build Script Execution
 *   When testing builds locally or in CI instructions, use the unified script located at the submodule path: `./caffeine-build/scripts/build.sh [--clean] <preset_name> <cmake_target>`.
