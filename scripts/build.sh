@@ -36,33 +36,48 @@ TARGET="${TARGET:-all}"
 # --- 2. Architecture Detection ---
 # Extract specialized Docker image stage and binary directory from the preset.
 if [ -f "CMakePresets.json" ]; then
-    # We query CMake for the preset metadata. 
-    # Use -N (dry-run) to get the configuration details including binaryDir.
+    # Query preset details. Fallback to default naming if query fails.
     PRESET_INFO=$(cmake --preset "$PRESET" -N 2>/dev/null || true)
     
-    if [ -z "$PRESET_INFO" ]; then
-        echo "Error: Could not find or load preset '$PRESET'"
-        exit 1
+    if [ -n "$PRESET_INFO" ]; then
+        STAGE=$(echo "$PRESET_INFO" | grep "CAFFEINE_BUILD_STAGE" | cut -d'=' -f2 | tr -d '"' | xargs)
+        # Extract binary directory from 'builds in' line
+        # CMake output: "  builds in "/home/user/repo/build/preset""
+        BINARY_DIR=$(echo "$PRESET_INFO" | grep "builds in" | sed 's/.*builds in "\(.*\)"/\1/' | xargs)
     fi
-
-    STAGE=$(echo "$PRESET_INFO" | grep "CAFFEINE_BUILD_STAGE" | cut -d'=' -f2 | tr -d '"' | xargs)
-    # Correctly extract the binary directory from the 'builds in' line
-    BINARY_DIR=$(echo "$PRESET_INFO" | grep "builds in" | sed 's/.*builds in "\(.*\)"/\1/' | xargs)
 fi
 
 # Fallback defaults
 STAGE="${STAGE:-build-native}"
 BINARY_DIR="${BINARY_DIR:-build/$PRESET}"
 
-# Convert relative BINARY_DIR to absolute path relative to /work for the build command
-if [[ "$BINARY_DIR" != /* ]]; then
+# --- 3. Binary Directory Normalization ---
+# In Docker, the sourceDir is ALWAYS /work.
+# If the extracted BINARY_DIR is absolute, it might contain the host path.
+# We must ensure it points to the /work path inside the container.
+if [[ "$BINARY_DIR" == "$(pwd)"* ]]; then
+    # Convert host-absolute path to /work relative path
+    BINARY_DIR="/work/${BINARY_DIR#$(pwd)/}"
+elif [[ "$BINARY_DIR" != /* ]]; then
+    # Already relative, make absolute to /work
     BINARY_DIR="/work/$BINARY_DIR"
+elif [[ "$BINARY_DIR" == "/work"* ]]; then
+    # Already correct
+    :
+else
+    # It's an absolute path that doesn't match PWD. 
+    # This happens in CI or nested submodules. 
+    # Best effort: if it ends with build/..., we use that.
+    if [[ "$BINARY_DIR" == *"build/"* ]]; then
+        SUBPATH=$(echo "$BINARY_DIR" | sed 's/.*build\//build\//')
+        BINARY_DIR="/work/$SUBPATH"
+    fi
 fi
 
 REPO_OWNER="${GITHUB_REPOSITORY_OWNER:-while-one}"
 IMAGE_NAME="ghcr.io/${REPO_OWNER}/caffeine-build/${STAGE}:latest"
 
-# --- 3. Environment Preparation ---
+# --- 4. Environment Preparation ---
 echo "--------------------------------------------------------------------------------"
 echo " Image:      $IMAGE_NAME"
 echo " Preset:     $PRESET"
@@ -77,11 +92,9 @@ docker pull "$IMAGE_NAME" || {
     exit 1
 }
 
-# --- 4. Build Command Construction ---
+# --- 5. Build Command Construction ---
 if [ -f "CMakePresets.json" ]; then
     if [ "$TARGET" == "ctest" ]; then
-        # We MUST run ctest from the actual binary directory for it to find the test driver.
-        # We don't use --preset here because the Preset file is in the source dir, not build dir.
         CMD="cd $BINARY_DIR && ctest --output-on-failure"
     else
         CMD="cmake --preset $PRESET ${EXTRA_ARGS[*]} && \
@@ -96,11 +109,14 @@ else
     fi
 fi
 
-# --- 5. Execution (Containerized) ---
+# --- 6. Execution (Containerized) ---
 CLEAN_CMD=""
 if [ "$CLEAN_BUILD" = true ]; then
-    # We clean the local binary directory relative to the host
     LOCAL_BINARY_DIR=${BINARY_DIR#/work/}
+    if [ -z "$LOCAL_BINARY_DIR" ] || [ "$LOCAL_BINARY_DIR" == "/" ] || [ "$LOCAL_BINARY_DIR" == "." ]; then
+        echo "Error: Refusing to clean unsafe directory: '$LOCAL_BINARY_DIR'"
+        exit 1
+    fi
     CLEAN_CMD="rm -rf $LOCAL_BINARY_DIR && "
 fi
 

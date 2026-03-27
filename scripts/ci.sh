@@ -14,7 +14,6 @@ if [ ! -f "CMakePresets.json" ]; then
 fi
 
 # 1. Configuration & Argument Parsing
-# Command: list, format, analyze, build, test, all (default)
 COMMAND="${1:-all}"
 SPECIFIC_PRESET="$2"
 
@@ -34,23 +33,15 @@ if [ -z "$PROJECT_NAME" ]; then
 fi
 
 # 2. Preset Discovery
-# The output starts with two spaces then the preset name in double quotes
-ALL_PRESETS=$(cmake --list-presets | grep -E "^  \"" | cut -d'"' -f2 | grep -v "^base-")
+# Uses a more robust regex to find the preset names in double quotes,
+# filtering out hidden base presets.
+ALL_PRESETS=$(cmake --list-presets | grep -oP '(?<=")[^"]+(?=")' | grep -v "^base-")
 
 # 3. Command Execution Logic
 run_stage() {
     local PRESET=$1
     local STAGE=$2
     
-    # Query metadata natively
-    PRESET_METADATA=$(cmake --preset "$PRESET" -N 2>/dev/null || true)
-    if [ -z "$PRESET_METADATA" ]; then
-        echo ">>> Skipping Preset: $PRESET (Configuration failed - likely missing toolchain)"
-        return 0
-    fi
-
-    BUILD_TESTS=$(echo "$PRESET_METADATA" | grep "CFN_BUILD_TESTS" | cut -d'=' -f2 | tr -d '"' | xargs || echo "OFF")
-
     case "$STAGE" in
         format)
             echo ">>> [Format] Validating Preset: $PRESET"
@@ -65,15 +56,14 @@ run_stage() {
             $BUILD_SCRIPT "$PRESET" all
             ;;
         test)
-            if [ "$BUILD_TESTS" == "ON" ]; then
+            # Check if a test preset exists for this preset
+            if cmake --list-presets=test | grep -q "\"$PRESET\""; then
                 echo ">>> [Test] Validating Preset: $PRESET"
-                if cmake --list-presets=test | grep -q "\"$PRESET\""; then
-                    $BUILD_SCRIPT "$PRESET" ctest
-                else
-                    $BUILD_SCRIPT "$PRESET" ctest unit-tests-gtest
-                fi
-            else
-                echo ">>> [Test] Skipping Preset: $PRESET (Tests not enabled)"
+                $BUILD_SCRIPT "$PRESET" ctest
+            elif [ "$PRESET" == "unit-tests-gtest" ] || [ "$PRESET" == "template" ]; then
+                # Fallback for core test presets that might use 'unit-tests-gtest' explicitly
+                echo ">>> [Test] Validating Preset: $PRESET (Fallback to unit-tests-gtest)"
+                $BUILD_SCRIPT "$PRESET" ctest unit-tests-gtest
             fi
             ;;
         *)
@@ -93,9 +83,15 @@ for line in sys.stdin:
     p = line.strip()
     if not p: continue
     try:
+        # Check if tests are enabled for this preset via metadata or name
         res = subprocess.run(['cmake', '--preset', p, '-N'], capture_output=True, text=True)
-        build_tests = 'ON' if 'CFN_BUILD_TESTS=\"ON\"' in res.stdout else 'OFF'
-        presets.append({'name': p, 'tests': build_tests == 'ON'})
+        has_tests = 'CFN_BUILD_TESTS=\"ON\"' in res.stdout
+        
+        # Also check if a test preset exists
+        res_test = subprocess.run(['cmake', '--list-presets=test'], capture_output=True, text=True)
+        test_exists = f'\"{p}\"' in res_test.stdout or p == 'unit-tests-gtest'
+        
+        presets.append({'name': p, 'tests': has_tests or test_exists})
     except:
         continue
 print(json.dumps(presets))
