@@ -94,15 +94,15 @@ docker pull "$IMAGE_NAME" || {
 
 # --- 5. Build Command Construction ---
 if [ -f "CMakePresets.json" ]; then
-    if [ "$TARGET" == "ctest" ]; then
-        CMD="cd $BINARY_DIR && ctest --output-on-failure"
+    if [[ "$TARGET" == ctest* ]]; then
+        CMD="$TARGET"
     else
         CMD="cmake --preset $PRESET ${EXTRA_ARGS[*]} && \
              cmake --build $BINARY_DIR --target $TARGET"
     fi
 else
-    if [ "$TARGET" == "ctest" ]; then
-        CMD="cd build && ctest --output-on-failure"
+    if [[ "$TARGET" == ctest* ]]; then
+        CMD="cd build && $TARGET"
     else
         CMD="cmake -B build -DFETCHCONTENT_FULLY_DISCONNECTED=OFF ${EXTRA_ARGS[*]} && \
              cmake --build build --target $TARGET"

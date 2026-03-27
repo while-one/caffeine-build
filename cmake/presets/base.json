@@ -70,15 +70,5 @@
         "CAFFEINE_BUILD_STAGE": "build-riscv"
       }
     }
-  ],
-  "testPresets": [
-    {
-      "name": "base-unit-tests-gtest",
-      "hidden": true,
-      "configurePreset": "base-unit-tests-gtest",
-      "output": {
-        "outputOnFailure": true
-      }
-    }
   ]
 }
