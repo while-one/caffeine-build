@@ -16,7 +16,7 @@
       "description": "Standardized unit test configuration using the host compiler",
       "inherits": "base-common",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build/unit-tests-gtest",
+      "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CFN_BUILD_TESTS": "ON"
       }

@@ -39,14 +39,14 @@ By decoupling the build system from the code repositories, `caffeine-build` ensu
 *   `cmake/presets/`: Centralized `base.json` containing shared configuration and test presets (`unit-tests-gtest`).
 *   `cmake/CaffeineMacros.cmake`: Reusable functions (e.g., `cfn_add_firmware()`, `cfn_get_clang_tidy_extra_args()`).
 *   `scripts/build.sh`: Main build orchestrator supporting incremental builds and custom binary dirs.
-*   `scripts/ci.sh`: Unified CI script that validates all presets in a project.
+*   `scripts/ci.sh`: Unified CI script that supports granular commands for parallel matrix orchestration.
 *   `config/coding/`: Global coding standards (`.clang-format`, `.clang-tidy`, `cppcheck-suppressions.txt`).
 
 ## Standardized Quality Gates
 
 The repository provides two primary scripts for local and CI development:
-- **`scripts/build.sh`**: Orchestrates builds for specific presets and targets.
-- **`scripts/ci.sh`**: The unified quality gate. It discovers all non-hidden presets and runs:
+- **`scripts/build.sh`**: Orchestrates builds for specific presets and targets. Supports `ctest` as a target.
+- **`scripts/ci.sh`**: The unified quality gate. It supports granular commands (`list`, `format`, `analyze`, `build`, `test`) for parallel orchestration in GitHub Actions, or a default `all` command for local sequential validation of all presets.
   1. **Format Check:** Dry-run validation of coding style.
   2. **Static Analysis:** Deep analysis via `clang-tidy` and `cppcheck` (Fail-on-warning).
   3. **Compilation:** Full build of all targets.

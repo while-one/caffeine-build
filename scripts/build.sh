@@ -36,9 +36,18 @@ TARGET="${TARGET:-all}"
 # --- 2. Architecture Detection ---
 # Extract specialized Docker image stage and binary directory from the preset.
 if [ -f "CMakePresets.json" ]; then
-    PRESET_INFO=$(cmake --preset "$PRESET" -N 2>/dev/null)
+    # We query CMake for the preset metadata. 
+    # Use -N (dry-run) to get the configuration details including binaryDir.
+    PRESET_INFO=$(cmake --preset "$PRESET" -N 2>/dev/null || true)
+    
+    if [ -z "$PRESET_INFO" ]; then
+        echo "Error: Could not find or load preset '$PRESET'"
+        exit 1
+    fi
+
     STAGE=$(echo "$PRESET_INFO" | grep "CAFFEINE_BUILD_STAGE" | cut -d'=' -f2 | tr -d '"' | xargs)
-    BINARY_DIR=$(echo "$PRESET_INFO" | grep "binaryDir" | cut -d'=' -f2 | tr -d '"' | xargs)
+    # Correctly extract the binary directory from the 'builds in' line
+    BINARY_DIR=$(echo "$PRESET_INFO" | grep "builds in" | sed 's/.*builds in "\(.*\)"/\1/' | xargs)
 fi
 
 # Fallback defaults
@@ -46,8 +55,6 @@ STAGE="${STAGE:-build-native}"
 BINARY_DIR="${BINARY_DIR:-build/$PRESET}"
 
 # Convert relative BINARY_DIR to absolute path relative to /work for the build command
-# If BINARY_DIR is absolute (starts with /), we assume it's already mapped or correct.
-# However, CMakePresets usually use ${sourceDir}, which becomes /work in the container.
 if [[ "$BINARY_DIR" != /* ]]; then
     BINARY_DIR="/work/$BINARY_DIR"
 fi
@@ -71,17 +78,16 @@ docker pull "$IMAGE_NAME" || {
 }
 
 # --- 4. Build Command Construction ---
-# We use an array to maintain proper quoting when passing to bash -c
 if [ -f "CMakePresets.json" ]; then
-    # Modern Preset-based Workflow
     if [ "$TARGET" == "ctest" ]; then
-        CMD="ctest --preset $PRESET --output-on-failure"
+        # We MUST run ctest from the actual binary directory for it to find the test driver.
+        # We don't use --preset here because the Preset file is in the source dir, not build dir.
+        CMD="cd $BINARY_DIR && ctest --output-on-failure"
     else
         CMD="cmake --preset $PRESET ${EXTRA_ARGS[*]} && \
              cmake --build $BINARY_DIR --target $TARGET"
     fi
 else
-    # Standard Native Workflow
     if [ "$TARGET" == "ctest" ]; then
         CMD="cd build && ctest --output-on-failure"
     else
@@ -91,12 +97,11 @@ else
 fi
 
 # --- 5. Execution (Containerized) ---
-# We use --user to ensure files created in the volume match the host user's UID/GID
-# this prevents "permission denied" or "git ownership" errors during FetchContent.
 CLEAN_CMD=""
 if [ "$CLEAN_BUILD" = true ]; then
-    # We clean the local 'build' dir if it exists, or the specific BINARY_DIR if it's relative
-    CLEAN_CMD="rm -rf build ${BINARY_DIR#/work/} && "
+    # We clean the local binary directory relative to the host
+    LOCAL_BINARY_DIR=${BINARY_DIR#/work/}
+    CLEAN_CMD="rm -rf $LOCAL_BINARY_DIR && "
 fi
 
 docker run --rm \
