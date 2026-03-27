@@ -45,12 +45,12 @@ By decoupling the build system from the code repositories, `caffeine-build` ensu
 ## Standardized Quality Gates
 
 The repository provides two primary scripts for local and CI development:
-- **`scripts/build.sh`**: Orchestrates builds for specific presets and targets. Supports `ctest` as a target.
+- **`scripts/build.sh`**: Orchestrates builds for specific presets and targets. Supports `ctest --preset <name>` as a target.
 - **`scripts/ci.sh`**: The unified quality gate. It supports granular commands (`list`, `format`, `analyze`, `build`, `test`) for parallel orchestration in GitHub Actions, or a default `all` command for local sequential validation of all presets.
   1. **Format Check:** Dry-run validation of coding style.
-  2. **Static Analysis:** Deep analysis via `clang-tidy` and `cppcheck` (Fail-on-warning).
+  2. **Static Analysis:** Deep analysis via `clang-tidy` and `cppcheck` (Fail-on-warning). Targets are managed via the `cfn_add_code_quality_targets()` macro.
   3. **Compilation:** Full build of all targets.
-  4. **Unit Tests:** Automated execution via `ctest` for test-enabled presets.
+  4. **Unit Tests:** Automated execution via `ctest --preset <name>` for presets that have a matching-name test preset defined.
 
 ## Usage in Applications
 
