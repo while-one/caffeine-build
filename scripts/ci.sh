@@ -56,14 +56,10 @@ run_stage() {
             $BUILD_SCRIPT "$PRESET" all
             ;;
         test)
-            # Check if a test preset exists for this preset
+            # Run the test preset if it exists (standardized matching-name convention)
             if cmake --list-presets=test | grep -q "\"$PRESET\""; then
                 echo ">>> [Test] Validating Preset: $PRESET"
-                $BUILD_SCRIPT "$PRESET" ctest
-            elif [ "$PRESET" == "unit-tests-gtest" ] || [ "$PRESET" == "template" ]; then
-                # Fallback for core test presets that might use 'unit-tests-gtest' explicitly
-                echo ">>> [Test] Validating Preset: $PRESET (Fallback to unit-tests-gtest)"
-                $BUILD_SCRIPT "$PRESET" ctest unit-tests-gtest
+                $BUILD_SCRIPT "$PRESET" "ctest --preset $PRESET"
             fi
             ;;
         *)
