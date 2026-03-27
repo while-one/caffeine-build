@@ -10,13 +10,79 @@ on:
         type: string
 
 jobs:
-  unified-ci:
-    name: Framework Unified Quality Gate
+  discover:
+    name: Discovery
     runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.submodules }}
+      - id: set-matrix
+        name: Generate Preset Matrix
+        run: |
+          chmod +x ./caffeine-build/scripts/*.sh
+          MATRIX=$(./caffeine-build/scripts/ci.sh list)
+          echo "matrix=${MATRIX}" >> $GITHUB_OUTPUT
 
-      - name: Run Unified CI Script
-        run: chmod +x ./caffeine-build/scripts/*.sh && ./caffeine-build/scripts/ci.sh
+  lint-format:
+    name: Format
+    needs: discover
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: ${{ fromJson(needs.discover.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.submodules }}
+      - name: Check Formatting
+        run: ./caffeine-build/scripts/ci.sh format ${{ matrix.preset.name }}
+
+  static-analysis:
+    name: Analysis
+    needs: [discover, lint-format]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: ${{ fromJson(needs.discover.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.submodules }}
+      - name: Run Static Analysis
+        run: ./caffeine-build/scripts/ci.sh analyze ${{ matrix.preset.name }}
+
+  compilation:
+    name: Build
+    needs: [discover, static-analysis]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: ${{ fromJson(needs.discover.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.submodules }}
+      - name: Build All Targets
+        run: ./caffeine-build/scripts/ci.sh build ${{ matrix.preset.name }}
+
+  unit-tests:
+    name: Test
+    needs: [discover, compilation]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: ${{ fromJson(needs.discover.outputs.matrix) }}
+    if: ${{ matrix.preset.tests }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.submodules }}
+      - name: Run Unit Tests
+        run: ./caffeine-build/scripts/ci.sh test ${{ matrix.preset.name }}
