@@ -1,0 +1,49 @@
+name: Reusable Doxygen Deployment
+
+on:
+  workflow_call:
+    inputs:
+      preset:
+        description: 'The CMake preset to use for the documentation build'
+        required: false
+        default: 'unit-tests-gtest'
+        type: string
+      submodules:
+        description: 'Submodule checkout strategy'
+        required: false
+        default: 'recursive'
+        type: string
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.submodules }}
+          fetch-depth: 0
+
+      - name: Build Documentation
+        run: ./caffeine-build/scripts/ci.sh doc ${{ inputs.preset }}
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Path defined in cfn_add_docs
+          path: "build/${{ inputs.preset }}/docs"
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
