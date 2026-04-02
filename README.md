@@ -45,12 +45,54 @@ By decoupling the build system from the code repositories, `caffeine-build` ensu
 ## Standardized Quality Gates
 
 The repository provides two primary scripts for local and CI development:
-- **`scripts/build.sh`**: Orchestrates builds for specific presets and targets. Supports `ctest --preset <name>` as a target.
-- **`scripts/ci.sh`**: The unified quality gate. It supports granular commands (`list`, `format`, `analyze`, `build`, `test`) for parallel orchestration in GitHub Actions, or a default `all` command for local sequential validation of all presets.
-  1. **Format Check:** Dry-run validation of coding style.
-  2. **Static Analysis:** Deep analysis via `clang-tidy` and `cppcheck` (Fail-on-warning). Targets are managed via the `cfn_add_code_quality_targets()` macro.
-  3. **Compilation:** Full build of all targets.
-  4. **Unit Tests:** Automated execution via `ctest --preset <name>` for presets that have a matching-name test preset defined.
+- **`scripts/build.sh`**: Orchestrates builds for specific presets and targets.
+- **`scripts/ci.sh`**: The unified quality gate orchestrator.
+
+## Usage & Workflows
+
+### 1. Basic Build Commands
+Use `build.sh` to trigger compilation for a specific target and preset:
+```bash
+# Build everything for the native Linux preset
+./caffeine-build/scripts/build.sh linux-native all
+
+# Perform a clean build for an ARM target
+./caffeine-build/scripts/build.sh --clean stm32f407-release
+```
+
+### 2. Full CI Validation
+Run the complete quality gate (Format -> Analyze -> Build -> Test -> Doc) locally:
+```bash
+# Validate all presets
+./caffeine-build/scripts/ci.sh all
+
+# Validate only a specific preset
+./caffeine-build/scripts/ci.sh all stm32f4-mock-tests
+```
+
+### 3. Developing with Local Dependencies (Local Mounts)
+If you are iterating on multiple framework repositories simultaneously (e.g., adding a feature to `caffeine-hal` and testing it in `caffeine-hal-ports`), you can use the `--mount` flag to inject your local changes into the Docker build container without committing.
+
+**Workflow:**
+1.  In your project (e.g., `caffeine-hal-ports`), create a `CMakeUserPresets.json` that overrides the dependency path:
+    ```json
+    {
+      "version": 4,
+      "configurePresets": [
+        {
+          "name": "local-dev",
+          "inherits": "stm32f4-mock-tests",
+          "cacheVariables": {
+            "FETCHCONTENT_SOURCE_DIR_CAFFEINE-HAL": "/caffeine-hal"
+          }
+        }
+      ]
+    }
+    ```
+2.  Run the build or CI script with the `--mount` flag to map your host directory to the path expected by CMake:
+    ```bash
+    ./caffeine-build/scripts/ci.sh --mount $(pwd)/../caffeine-hal:/caffeine-hal all local-dev
+    ```
 
 ## Usage in Applications
 
