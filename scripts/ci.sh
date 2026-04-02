@@ -113,10 +113,9 @@ run_stage() {
             ;;
         doc)
             # Run doxygen documentation target. 
-            # We use a best-effort approach since not all projects might have docs.
             echo ">>> [Docs] Validating Preset: $PRESET"
             # Target is usually <project>-docs
-            $BUILD_SCRIPT "$PRESET" "${PROJECT_NAME}-docs" "${EXTRA_BUILD_ARGS[@]}" || echo "Skipping docs (target not found)"
+            $BUILD_SCRIPT "$PRESET" "${PROJECT_NAME}-docs" "${EXTRA_BUILD_ARGS[@]}"
             ;;
         *)
             echo "Error: Unknown CI stage '$STAGE'"
@@ -127,7 +126,6 @@ run_stage() {
 
 # 4. Dispatcher
 if [ "$COMMAND" == "list" ]; then
-# ... rest of list logic ...
     # Generate JSON matrix for GitHub Actions
     echo "$ALL_PRESETS" | python3 -c "
 import json, subprocess, sys
@@ -158,10 +156,10 @@ if [ "$COMMAND" == "all" ]; then
     echo "--------------------------------------------------------------------------------"
     for P in $ALL_PRESETS; do
         run_stage "$P" format
+        run_stage "$P" doc
         run_stage "$P" analyze
         run_stage "$P" build
         run_stage "$P" test
-        run_stage "$P" doc
     done
 elif [ -n "$SPECIFIC_PRESET" ]; then
     run_stage "$SPECIFIC_PRESET" "$COMMAND"
