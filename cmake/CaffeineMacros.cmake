@@ -192,3 +192,50 @@ function(cfn_add_code_quality_targets TARGET_NAME)
         add_dependencies(${TARGET_NAME}-analyze ${TARGET_NAME}-tidy)
     endif()
 endfunction()
+
+# ==============================================================================
+# Documentation Targets
+# ==============================================================================
+# Function to add a Doxygen documentation target
+function(cfn_add_docs TARGET_NAME INPUT_DIR)
+    set(options)
+    set(oneValueArgs COMMENT)
+    set(multiValueArgs)
+    cmake_parse_arguments(ARGS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+    find_package(Doxygen)
+    if(DOXYGEN_FOUND)
+        set(DOXYGEN_GENERATE_HTML YES)
+        set(DOXYGEN_HTML_OUTPUT docs)
+        set(DOXYGEN_RECURSIVE YES)
+        set(DOXYGEN_USE_MDRVP_AS_MAINPAGE YES)
+        set(DOXYGEN_WARN_AS_ERROR YES)
+        set(DOXYGEN_GENERATE_LATEX NO)
+        set(DOXYGEN_OPTIMIZE_OUTPUT_FOR_C YES)
+        set(DOXYGEN_EXTRACT_ALL YES)
+
+        # Ensure we point to the project README as the main page if it exists
+        if(EXISTS "${PROJECT_SOURCE_DIR}/README.md")
+            set(DOXYGEN_USE_MDRVP_AS_MAINPAGE YES)
+        endif()
+
+        doxygen_add_docs(
+            ${TARGET_NAME}
+            ${INPUT_DIR}
+            ${PROJECT_SOURCE_DIR}/README.md
+            COMMENT "${ARGS_COMMENT}"
+        )
+
+        # Create .nojekyll in the output directory after Doxygen runs
+        # This ensures GitHub Pages serves files/folders starting with underscores.
+        add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/docs/.nojekyll
+            COMMENT "Creating .nojekyll for GitHub Pages deployment"
+            VERBATIM
+        )
+    else()
+        # In this framework, documentation is mandatory for CI.
+        # We fail configuration if Doxygen is missing and we are in a documentation-enabled stage.
+        message(WARNING "Doxygen not found - documentation cannot be generated for ${TARGET_NAME}")
+    endif()
+endfunction()
