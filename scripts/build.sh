@@ -10,11 +10,49 @@ CLEAN_BUILD=false
 PRESET=""
 TARGET=""
 EXTRA_ARGS=()
+DOCKER_MOUNTS=()
+
+show_help() {
+    echo "Caffeine Framework Build Orchestrator"
+    echo ""
+    echo "Usage: ./build.sh [OPTIONS] [PRESET] [TARGET]"
+    echo ""
+    echo "Options:"
+    echo "  --help, -h          Show this help message and exit"
+    echo "  --clean             Perform a clean build (removes binary directory first)"
+    echo "  --mount <src:dst>   Inject a local directory into the Docker container"
+    echo "                      (e.g., --mount $(pwd)/../caffeine-hal:/caffeine-hal)"
+    echo "  -D<var>=<value>     Pass arbitrary CMake arguments"
+    echo ""
+    echo "Arguments:"
+    echo "  PRESET              The CMake preset to use (default: linux-native)"
+    echo "  TARGET              The CMake target to build (default: all)"
+    echo ""
+    echo "Examples:"
+    echo "  # Simple build"
+    echo "  ./caffeine-build/scripts/build.sh linux-native all"
+    echo ""
+    echo "  # Clean build for cross-compilation"
+    echo "  ./caffeine-build/scripts/build.sh --clean stm32f407-release"
+    echo ""
+    echo "  # Build with local dependency override"
+    echo "  ./caffeine-build/scripts/build.sh --mount $(pwd)/../caffeine-hal:/caffeine-hal stm32f4-mock-tests-local"
+}
 
 # Parse arguments
 while [[ "$#" -gt 0 ]]; do
     case "$1" in
+        --help|-h) show_help; exit 0 ;;
         --clean) CLEAN_BUILD=true ;;
+        --mount)
+            # Split src and dst. src might be relative.
+            IFS=':' read -r SRC DST <<< "$2"
+            if [[ ! "$SRC" == /* ]]; then
+                SRC=$(realpath "$SRC")
+            fi
+            DOCKER_MOUNTS+=("-v" "$SRC:$DST")
+            shift
+            ;;
         -*) EXTRA_ARGS+=("$1") ;;
         *)
             if [ -z "$PRESET" ]; then
@@ -123,6 +161,7 @@ fi
 docker run --rm \
     --user "$(id -u):$(id -g)" \
     -v "$(pwd)":/work \
+    "${DOCKER_MOUNTS[@]}" \
     -w /work \
     "$IMAGE_NAME" \
     bash -c "${CLEAN_CMD}$CMD"

@@ -13,9 +13,58 @@ if [ ! -f "CMakePresets.json" ]; then
     exit 1
 fi
 
+show_help() {
+    echo "Caffeine Framework Unified CI Orchestrator"
+    echo ""
+    echo "Usage: ./ci.sh [OPTIONS] <COMMAND> [PRESET]"
+    echo ""
+    echo "Options:"
+    echo "  --help, -h          Show this help message and exit"
+    echo "  --mount <src:dst>   Inject a local directory into the underlying build container"
+    echo ""
+    echo "Commands:"
+    echo "  all                 Run format, analyze, build, test, and doc stages for all presets"
+    echo "  list                Generate a JSON list of available presets (for GitHub Actions)"
+    echo "  format              Run clang-format check"
+    echo "  analyze             Run clang-tidy and cppcheck"
+    echo "  build               Run compilation"
+    echo "  test                Run unit tests"
+    echo "  doc                 Run Doxygen documentation generation"
+    echo ""
+    echo "Arguments:"
+    echo "  PRESET              (Optional) Only run the command for a specific preset"
+    echo ""
+    echo "Example:"
+    echo "  ./ci.sh --mount $(pwd)/../caffeine-hal:/caffeine-hal all stm32f4-mock-tests-local"
+}
+
 # 1. Configuration & Argument Parsing
-COMMAND="${1:-all}"
-SPECIFIC_PRESET="$2"
+COMMAND=""
+SPECIFIC_PRESET=""
+EXTRA_BUILD_ARGS=()
+
+while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+        --help|-h) show_help; exit 0 ;;
+        --mount)
+            EXTRA_BUILD_ARGS+=("--mount" "$2")
+            shift
+            ;;
+        -*) EXTRA_BUILD_ARGS+=("$1") ;;
+        *)
+            if [ -z "$COMMAND" ]; then
+                COMMAND="$1"
+            elif [ -z "$SPECIFIC_PRESET" ]; then
+                SPECIFIC_PRESET="$1"
+            else
+                EXTRA_BUILD_ARGS+=("$1")
+            fi
+            ;;
+    esac
+    shift
+done
+
+COMMAND="${COMMAND:-all}"
 
 # Get project name from CMakeLists.txt
 PROJECT_NAME=$(python3 -c "
@@ -45,22 +94,29 @@ run_stage() {
     case "$STAGE" in
         format)
             echo ">>> [Format] Validating Preset: $PRESET"
-            $BUILD_SCRIPT --clean "$PRESET" "${PROJECT_NAME}-format" -DFORMAT_DRY_RUN=ON
+            $BUILD_SCRIPT --clean "$PRESET" "${PROJECT_NAME}-format" -DFORMAT_DRY_RUN=ON "${EXTRA_BUILD_ARGS[@]}"
             ;;
         analyze)
             echo ">>> [Analyze] Validating Preset: $PRESET"
-            $BUILD_SCRIPT "$PRESET" "${PROJECT_NAME}-analyze"
+            $BUILD_SCRIPT "$PRESET" "${PROJECT_NAME}-analyze" "${EXTRA_BUILD_ARGS[@]}"
             ;;
         build)
             echo ">>> [Build] Validating Preset: $PRESET"
-            $BUILD_SCRIPT "$PRESET" all
+            $BUILD_SCRIPT "$PRESET" all "${EXTRA_BUILD_ARGS[@]}"
             ;;
         test)
             # Run the test preset if it exists (standardized matching-name convention)
             if cmake --list-presets=test | grep -q "\"$PRESET\""; then
                 echo ">>> [Test] Validating Preset: $PRESET"
-                $BUILD_SCRIPT "$PRESET" "ctest --preset $PRESET"
+                $BUILD_SCRIPT "$PRESET" "ctest --preset $PRESET" "${EXTRA_BUILD_ARGS[@]}"
             fi
+            ;;
+        doc)
+            # Run doxygen documentation target. 
+            # We use a best-effort approach since not all projects might have docs.
+            echo ">>> [Docs] Validating Preset: $PRESET"
+            # Target is usually <project>-docs
+            $BUILD_SCRIPT "$PRESET" "${PROJECT_NAME}-docs" "${EXTRA_BUILD_ARGS[@]}" || echo "Skipping docs (target not found)"
             ;;
         *)
             echo "Error: Unknown CI stage '$STAGE'"
@@ -71,6 +127,7 @@ run_stage() {
 
 # 4. Dispatcher
 if [ "$COMMAND" == "list" ]; then
+# ... rest of list logic ...
     # Generate JSON matrix for GitHub Actions
     echo "$ALL_PRESETS" | python3 -c "
 import json, subprocess, sys
@@ -104,6 +161,7 @@ if [ "$COMMAND" == "all" ]; then
         run_stage "$P" analyze
         run_stage "$P" build
         run_stage "$P" test
+        run_stage "$P" doc
     done
 elif [ -n "$SPECIFIC_PRESET" ]; then
     run_stage "$SPECIFIC_PRESET" "$COMMAND"
