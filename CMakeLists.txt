@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.23)
 
 # Placeholder project name and version
 project(caffeine-build
-        VERSION 0.2.8
+        VERSION 0.2.9
         LANGUAGES C
         DESCRIPTION "Unified build system and SDK for the Caffeine Framework"
         HOMEPAGE_URL "https://github.com/while-one/caffeine-build"
