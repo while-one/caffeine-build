@@ -41,9 +41,24 @@ jobs:
       - name: Check Formatting
         run: ./caffeine-build/scripts/ci.sh format ${{ matrix.preset.name }}
 
+  documentation:
+    name: Docs
+    needs: [discover, lint-format]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: ${{ fromJson(needs.discover.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.submodules }}
+      - name: Build Documentation
+        run: ./caffeine-build/scripts/ci.sh doc ${{ matrix.preset.name }}
+
   static-analysis:
     name: Analysis
-    needs: [discover, lint-format]
+    needs: [discover, documentation]
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
