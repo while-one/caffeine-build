@@ -91,11 +91,18 @@ run_stage() {
     local PRESET=$1
     local STAGE=$2
     
+    # Query preset metadata
+    local PRESET_INFO=$(cmake --preset "$PRESET" -N 2>/dev/null || true)
+    local IS_UNIVERSE=false
+    if echo "$PRESET_INFO" | grep -q 'CAFFEINE_UNIVERSE_TARGET="ON"'; then
+        IS_UNIVERSE=true
+    fi
+
     case "$STAGE" in
         format)
-            # Use universe target if available, otherwise fallback to standard format
+            # Use universe target if metadata matches, otherwise fallback to standard format
             local TARGET="${PROJECT_NAME}-check-format"
-            if [ "$PRESET" == "universe-all-sources" ]; then
+            if [ "$IS_UNIVERSE" = true ]; then
                 TARGET="${PROJECT_NAME}-universe-check-format"
             fi
             echo ">>> [Format] Validating Preset: $PRESET (Target: $TARGET)"
@@ -130,26 +137,40 @@ run_stage() {
 
 # 4. Dispatcher
 if [ "$COMMAND" == "list" ]; then
-    # Generate JSON matrix for GitHub Actions
+    # Generate optimized JSON matrices for GitHub Actions using CMake metadata
     echo "$ALL_PRESETS" | python3 -c "
 import json, subprocess, sys
-presets = []
+universe = []
+hardware = []
 for line in sys.stdin:
     p = line.strip()
     if not p: continue
     try:
-        # Check if tests are enabled for this preset via metadata or name
+        # Query preset details
         res = subprocess.run(['cmake', '--preset', p, '-N'], capture_output=True, text=True)
-        has_tests = 'CFN_BUILD_TESTS=\"ON\"' in res.stdout
+        stdout = res.stdout
+        
+        is_universe = 'CAFFEINE_UNIVERSE_TARGET=\"ON\"' in stdout
+        has_tests = 'CFN_BUILD_TESTS=\"ON\"' in stdout
         
         # Also check if a test preset exists
         res_test = subprocess.run(['cmake', '--list-presets=test'], capture_output=True, text=True)
         test_exists = f'\"{p}\"' in res_test.stdout or p == 'unit-tests-gtest'
         
-        presets.append({'name': p, 'tests': has_tests or test_exists})
+        preset_data = {'name': p, 'tests': has_tests or test_exists}
+        
+        if is_universe:
+            universe.append(preset_data)
+        else:
+            hardware.append(preset_data)
     except:
         continue
-print(json.dumps(presets))
+
+# Fallback: if no universe preset exists, use the first hardware preset for global tasks
+if not universe and hardware:
+    universe.append(hardware[0])
+
+print(json.dumps({'universe': universe, 'hardware': hardware}))
 "
     exit 0
 fi
@@ -159,23 +180,29 @@ if [ "$COMMAND" == "all" ]; then
     echo " Starting Unified CI (Sequential) for project: $PROJECT_NAME"
     echo "--------------------------------------------------------------------------------"
     
-    # 1. Global Stages (Optimization: Run once for all sources if preset exists)
-    HAS_UNIVERSE=false
-    if echo "$ALL_PRESETS" | grep -q "universe-all-sources"; then
-        echo ">>> Detected 'universe-all-sources' preset. Running global stages..."
-        HAS_UNIVERSE=true
-        run_stage "universe-all-sources" format
-        run_stage "universe-all-sources" doc
-        # Filter out the universe preset for the matrix loop
-        MATRIX_PRESETS=$(echo "$ALL_PRESETS" | grep -v "universe-all-sources")
+    # 1. Discover Roles
+    UNIVERSE_PRESET=""
+    HARDWARE_PRESETS=()
+    for P in $ALL_PRESETS; do
+        if cmake --preset "$P" -N 2>/dev/null | grep -q 'CAFFEINE_UNIVERSE_TARGET="ON"'; then
+            UNIVERSE_PRESET="$P"
+        else
+            HARDWARE_PRESETS+=("$P")
+        fi
+    done
+
+    # 2. Global Stages (Optimization: Run once for the universe)
+    if [ -n "$UNIVERSE_PRESET" ]; then
+        echo ">>> Detected Universe preset: $UNIVERSE_PRESET. Running global stages..."
+        run_stage "$UNIVERSE_PRESET" format
+        run_stage "$UNIVERSE_PRESET" doc
     else
-        echo ">>> No 'universe-all-sources' preset found. Falling back to matrix-based global stages."
-        MATRIX_PRESETS=$ALL_PRESETS
+        echo ">>> No universe preset found. Global stages will run in matrix loop."
     fi
 
-    # 2. Matrix Stages (Analyze, Build, Test)
-    for P in $MATRIX_PRESETS; do
-        if [ "$HAS_UNIVERSE" = false ]; then
+    # 3. Matrix Stages (Analyze, Build, Test)
+    for P in ${HARDWARE_PRESETS[@]}; do
+        if [ -z "$UNIVERSE_PRESET" ]; then
             # If no universe preset, we must run format/doc in the loop
             run_stage "$P" format
             run_stage "$P" doc
