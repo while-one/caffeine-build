@@ -137,29 +137,24 @@ endfunction()
 # Code Quality Targets
 # ==============================================================================
 
-# Macro to add "Universe" targets that operate on ALL source files in the repo,
-# regardless of whether they are active in the current build configuration.
-# This ensures that CI quality gates (formatting, documentation) catch everything.
+# Macro to add "Universe" targets that operate on a provided list of source files.
+# This ensures that CI quality gates (formatting, documentation) catch everything 
+# defined by the top-level CMake.
 function(cfn_add_universe_targets)
-    # Recursively discover all C/C++ sources and headers in the repository
-    file(GLOB_RECURSE UNIVERSE_SOURCES
-        "${PROJECT_SOURCE_DIR}/src/*.c"
-        "${PROJECT_SOURCE_DIR}/src/*.h"
-        "${PROJECT_SOURCE_DIR}/src/*.cpp"
-        "${PROJECT_SOURCE_DIR}/src/*.hpp"
-        "${PROJECT_SOURCE_DIR}/include/*.h"
-        "${PROJECT_SOURCE_DIR}/include/*.hpp"
-    )
+    set(options)
+    set(oneValueArgs)
+    set(multiValueArgs INPUTS)
+    cmake_parse_arguments(ARGS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-    if(UNIVERSE_SOURCES)
+    if(ARGS_INPUTS)
         # Create a specialized formatting target for the entire universe
         cfn_add_code_quality_targets(
             ${PROJECT_NAME}-universe
-            FORMAT_SOURCES ${UNIVERSE_SOURCES}
+            FORMAT_SOURCES ${ARGS_INPUTS}
         )
         
         # Export the file list for other macros (like documentation)
-        set(CFN_UNIVERSE_SOURCES ${UNIVERSE_SOURCES} PARENT_SCOPE)
+        set(CFN_UNIVERSE_SOURCES ${ARGS_INPUTS} PARENT_SCOPE)
     endif()
 endfunction()
 
@@ -173,22 +168,29 @@ function(cfn_add_code_quality_targets TARGET_NAME)
     # 1. Code Formatting (clang-format)
     find_program(CLANG_FORMAT clang-format)
     if(CLANG_FORMAT AND ARGS_FORMAT_SOURCES)
-        option(FORMAT_DRY_RUN "Run clang-format in dry-run mode" OFF)
-        if(FORMAT_DRY_RUN)
-            set(FORMAT_ARGS --dry-run --Werror)
-            set(FORMAT_COMMENT "Checking formatting with clang-format...")
-        else()
-            set(FORMAT_ARGS -i)
-            set(FORMAT_COMMENT "Formatting files with clang-format...")
-        endif()
-
+        # Fixer Target: Automatically applies changes
         add_custom_target(
             ${TARGET_NAME}-format
             COMMAND ${CLANG_FORMAT}
-            ${FORMAT_ARGS}
+            -i
             -style=file:${PROJECT_SOURCE_DIR}/caffeine-build/config/coding/.clang-format
             ${ARGS_FORMAT_SOURCES}
-            COMMENT "${FORMAT_COMMENT}"
+            COMMENT "Formatting files with clang-format..."
+            VERBATIM
+            USES_TERMINAL
+        )
+
+        # Check Target: Validates without changing files (used by CI)
+        add_custom_target(
+            ${TARGET_NAME}-check-format
+            COMMAND ${CLANG_FORMAT}
+            --dry-run
+            --Werror
+            -style=file:${PROJECT_SOURCE_DIR}/caffeine-build/config/coding/.clang-format
+            ${ARGS_FORMAT_SOURCES}
+            COMMENT "Checking formatting with clang-format (dry-run)..."
+            VERBATIM
+            USES_TERMINAL
         )
     endif()
 
