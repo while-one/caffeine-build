@@ -1,6 +1,36 @@
 # Helper macros and shared build configurations for the Caffeine Framework
 
 # ==============================================================================
+# Architecture & Target Configuration
+# ==============================================================================
+
+# Macro to automatically apply architecture-specific compiler flags (ABI, FPU, CPU)
+# across all repositories based on the CFN_HAL_PORT_TARGET preset.
+macro(cfn_apply_target_architecture)
+    if(DEFINED CFN_HAL_PORT_VENDOR AND DEFINED CFN_HAL_PORT_FAMILY AND DEFINED CFN_HAL_PORT_TARGET)
+        set(TARGET_DEF_FILE "${PROJECT_SOURCE_DIR}/caffeine-build/cmake/ports/${CFN_HAL_PORT_VENDOR}/${CFN_HAL_PORT_FAMILY}/${CFN_HAL_PORT_TARGET}.cmake")
+        
+        if(EXISTS "${TARGET_DEF_FILE}")
+            include("${TARGET_DEF_FILE}")
+            message(STATUS "Caffeine: Loaded target definitions for ${CFN_HAL_PORT_TARGET}")
+            
+            # Globally inject architecture and FPU flags ONLY if we are cross-compiling.
+            # Host builds (mock tests) must not use ARM-specific compiler flags.
+            if(CMAKE_CROSSCOMPILING)
+                message(STATUS "Caffeine: Applied architecture flags for ${CFN_HAL_PORT_TARGET}")
+                if(DEFINED CAFFEINE_MCU_COMPILE_OPTIONS)
+                    separate_arguments(MCU_FLAGS_LIST NATIVE_COMMAND ${CAFFEINE_MCU_COMPILE_OPTIONS})
+                    add_compile_options(${MCU_FLAGS_LIST})
+                endif()
+            endif()
+        endif()
+    endif()
+endmacro()
+
+# Execute target architecture mapping automatically upon inclusion
+cfn_apply_target_architecture()
+
+# ==============================================================================
 # Global Compiler Options
 # ==============================================================================
 
@@ -106,6 +136,33 @@ endfunction()
 # ==============================================================================
 # Code Quality Targets
 # ==============================================================================
+
+# Macro to add "Universe" targets that operate on ALL source files in the repo,
+# regardless of whether they are active in the current build configuration.
+# This ensures that CI quality gates (formatting, documentation) catch everything.
+function(cfn_add_universe_targets)
+    # Recursively discover all C/C++ sources and headers in the repository
+    file(GLOB_RECURSE UNIVERSE_SOURCES
+        "${PROJECT_SOURCE_DIR}/src/*.c"
+        "${PROJECT_SOURCE_DIR}/src/*.h"
+        "${PROJECT_SOURCE_DIR}/src/*.cpp"
+        "${PROJECT_SOURCE_DIR}/src/*.hpp"
+        "${PROJECT_SOURCE_DIR}/include/*.h"
+        "${PROJECT_SOURCE_DIR}/include/*.hpp"
+    )
+
+    if(UNIVERSE_SOURCES)
+        # Create a specialized formatting target for the entire universe
+        cfn_add_code_quality_targets(
+            ${PROJECT_NAME}-universe
+            FORMAT_SOURCES ${UNIVERSE_SOURCES}
+        )
+        
+        # Export the file list for other macros (like documentation)
+        set(CFN_UNIVERSE_SOURCES ${UNIVERSE_SOURCES} PARENT_SCOPE)
+    endif()
+endfunction()
+
 # Function to add standard code quality targets (format, cppcheck, tidy, analyze)
 function(cfn_add_code_quality_targets TARGET_NAME)
     set(options HEADERS_ONLY)
@@ -119,10 +176,10 @@ function(cfn_add_code_quality_targets TARGET_NAME)
         option(FORMAT_DRY_RUN "Run clang-format in dry-run mode" OFF)
         if(FORMAT_DRY_RUN)
             set(FORMAT_ARGS --dry-run --Werror)
-            set(FORMAT_COMMENT "Checking formatting with clang-format (BARR-C style)...")
+            set(FORMAT_COMMENT "Checking formatting with clang-format...")
         else()
             set(FORMAT_ARGS -i)
-            set(FORMAT_COMMENT "Formatting files with clang-format (BARR-C style)...")
+            set(FORMAT_COMMENT "Formatting files with clang-format...")
         endif()
 
         add_custom_target(
@@ -197,10 +254,10 @@ endfunction()
 # Documentation Targets
 # ==============================================================================
 # Function to add a Doxygen documentation target
-function(cfn_add_docs TARGET_NAME INPUT_DIR)
+function(cfn_add_docs TARGET_NAME)
     set(options)
     set(oneValueArgs COMMENT)
-    set(multiValueArgs)
+    set(multiValueArgs INPUTS)
     cmake_parse_arguments(ARGS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     find_package(Doxygen)
@@ -221,8 +278,7 @@ function(cfn_add_docs TARGET_NAME INPUT_DIR)
 
         doxygen_add_docs(
             ${TARGET_NAME}
-            ${INPUT_DIR}
-            ${PROJECT_SOURCE_DIR}/README.md
+            ${ARGS_INPUTS}
             COMMENT "${ARGS_COMMENT}"
         )
 
