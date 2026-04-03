@@ -24,96 +24,73 @@
   </a>
 </p>
 
-This repository is the centralized build infrastructure for the **Caffeine Framework** ecosystem. It is designed to be consumed as a Git Submodule by all other repositories in the framework (`caffeine-hal`, `caffeine-hal-ports`, applications, and middleware).
+This repository is the centralized build and CI infrastructure for the **Caffeine Framework** ecosystem. It is designed to be consumed as a Git Submodule by all other repositories (`caffeine-hal`, `caffeine-hal-ports`, etc.) to ensure global consistency, ABI safety, and unified build orchestration.
 
-## Purpose
+## Core Architectural Pillars
 
-By decoupling the build system from the code repositories, `caffeine-build` ensures:
-1.  **Single Source of Truth:** CMake toolchains, hardware presets, and common macros are defined once.
-2.  **IDE Compatibility:** Because it is cloned as a submodule before CMake runs, `CMakePresets.json` in consuming repositories can reliably inherit from `caffeine-build/cmake/presets/base.json`.
-3.  **Unified Build Orchestration:** A standardized set of scripts (`build.sh`, `ci.sh`) ensures identical build and quality gate behavior locally and in CI.
+### 1. Centralized Hardware Authority
+Hardware target definitions (CPU cores, FPU settings, ABI flags, and linker script names) reside strictly within this repository in `cmake/ports/`. This ensures that every component in the ecosystem compiles with identical machine optimizations, preventing binary incompatibilities (e.g., mixing hard-float and soft-float) across the HAL, SAL, and Applications.
+
+### 2. ABI Safety & Global Flag Injection
+The framework automatically manages architecture-specific compiler flags.
+*   **Automatic Detection**: When a project includes `CaffeineMacros.cmake`, it automatically loads the target definition based on the `CFN_HAL_PORT_TARGET` preset.
+*   **Safe Injection**: Flags like `-mcpu` and `-mfpu` are injected globally using `add_compile_options()`, but **only** when `CMAKE_CROSSCOMPILING` is true. This allows the same code to be compiled for host simulation (mock tests) and real silicon (HIL) without manual configuration changes.
+
+### 3. "Universe" CI Optimization
+To minimize CI overhead, the framework introduces the **Universe Target** pattern. Instead of running formatting and documentation checks for every single MCU in a build matrix, the `ci-all-sources` preset enables a single-pass "Universe" validation that recursively catches every source and header file in the repository.
+
+---
 
 ## Directory Structure
 
-*   `cmake/toolchains/`: Cross-compiler definitions (e.g., `arm-gcc.cmake`, `riscv-gcc.cmake`).
-*   `cmake/presets/`: Centralized `base.json` containing shared configuration and test presets (`unit-tests-gtest`).
-*   `cmake/CaffeineMacros.cmake`: Reusable functions (e.g., `cfn_add_firmware()`, `cfn_get_clang_tidy_extra_args()`).
-*   `scripts/build.sh`: Main build orchestrator supporting incremental builds and custom binary dirs.
-*   `scripts/ci.sh`: Unified CI script that supports granular commands for parallel matrix orchestration.
-*   `config/coding/`: Global coding standards (`.clang-format`, `.clang-tidy`, `cppcheck-suppressions.txt`).
+*   `cmake/ports/`: **The Hardware Authority**. Contains `<target>.cmake` files defining silicon properties (e.g., `stm32f417vgtx.cmake`).
+*   `cmake/presets/`: Centralized CMake presets. `base.json` defines standard configurations for ARM, RISC-V, and Native builds.
+*   `cmake/toolchains/`: CMake toolchain files for cross-compilation (e.g., `arm-gcc.cmake`).
+*   `cmake/CaffeineMacros.cmake`: The core framework logic engine. Contains all shared build and quality gate functions.
+*   `scripts/build.sh`: Containerized build orchestrator. Maps local PWD to `/work` in Docker and handles architecture detection.
+*   `scripts/ci.sh`: Unified CI orchestrator. Manages sequential or parallel quality gates (Format, Analyze, Build, Test, Doc).
+*   `config/coding/`: Standards definitions (`.clang-format`, `.clang-tidy`, `cppcheck-suppressions.txt`).
 
-## Standardized Quality Gates
+---
 
-The repository provides two primary scripts for local and CI development:
-- **`scripts/build.sh`**: Orchestrates builds for specific presets and targets.
-- **`scripts/ci.sh`**: The unified quality gate orchestrator.
+## Core Macro Reference (`CaffeineMacros.cmake`)
+
+### `cfn_apply_target_architecture()`
+*   **Behavior**: Automatically called on inclusion.
+*   **Function**: Loads the `.cmake` file from `cmake/ports/` matching the current target and applies global compiler flags if cross-compiling.
+
+### `cfn_add_universe_targets()`
+*   **Behavior**: Must be called explicitly in `CMakeLists.txt`.
+*   **Function**: Recursively globs all `src` and `include` files to create `${PROJECT_NAME}-universe-format`.
+
+### `cfn_add_code_quality_targets(TARGET_NAME ...)`
+*   **Behavior**: Standardizes static analysis.
+*   **Args**: Supports `FORMAT_SOURCES`, `ANALYSIS_SOURCES`, and custom `TIDY_ARGS`.
+
+### `cfn_add_docs(TARGET_NAME INPUTS ...)`
+*   **Behavior**: Standardizes single-pass Doxygen generation.
+*   **Requirement**: Requires an explicit list of `INPUTS` (e.g., `${CFN_UNIVERSE_SOURCES}`).
+
+---
 
 ## Usage & Workflows
 
-### 1. Basic Build Commands
-Use `build.sh` to trigger compilation for a specific target and preset:
+### Unified Build Orchestration
+Use `build.sh` to trigger compilation inside the standardized Caffeine Docker environment:
 ```bash
-# Build everything for the native Linux preset
-./caffeine-build/scripts/build.sh linux-native all
+# Build for a specific target with a clean state
+./caffeine-build/scripts/build.sh --clean stm32f417vg-release all
 
-# Perform a clean build for an ARM target
-./caffeine-build/scripts/build.sh --clean stm32f407-release
+# Build using local dependency overrides (Local Mounts)
+./caffeine-build/scripts/build.sh --mount $(pwd)/../caffeine-hal:/caffeine-hal unit-tests-local
 ```
 
-### 2. Full CI Validation
+### Full CI Validation
 Run the complete quality gate (Format -> Analyze -> Build -> Test -> Doc) locally:
 ```bash
-# Validate all presets
+# Optimized validation using the Universe preset
 ./caffeine-build/scripts/ci.sh all
-
-# Validate only a specific preset
-./caffeine-build/scripts/ci.sh all stm32f4-mock-tests
 ```
-
-### 3. Developing with Local Dependencies (Local Mounts)
-If you are iterating on multiple framework repositories simultaneously (e.g., adding a feature to `caffeine-hal` and testing it in `caffeine-hal-ports`), you can use the `--mount` flag to inject your local changes into the Docker build container without committing.
-
-**Workflow:**
-1.  In your project (e.g., `caffeine-hal-ports`), create a `CMakeUserPresets.json` that overrides the dependency path:
-    ```json
-    {
-      "version": 4,
-      "configurePresets": [
-        {
-          "name": "local-dev",
-          "inherits": "stm32f4-mock-tests",
-          "cacheVariables": {
-            "FETCHCONTENT_SOURCE_DIR_CAFFEINE-HAL": "/caffeine-hal"
-          }
-        }
-      ]
-    }
-    ```
-2.  Run the build or CI script with the `--mount` flag to map your host directory to the path expected by CMake:
-    ```bash
-    ./caffeine-build/scripts/ci.sh --mount $(pwd)/../caffeine-hal:/caffeine-hal all local-dev
-    ```
-
-## Usage in Applications
-
-1.  Add this repository as a submodule: `git submodule add https://github.com/while-one/caffeine-build.git caffeine-build`
-2.  Inherit from `base.json` in your local `CMakePresets.json`:
-    ```json
-    {
-      "include": ["caffeine-build/cmake/presets/base.json"],
-      "configurePresets": [
-        {
-          "name": "my-target",
-          "inherits": "base-arm",
-          "cacheVariables": {
-            "CFN_HAL_PORT_VENDOR": "stm32",
-            "CFN_HAL_PORT_FAMILY": "stm32f4",
-            "CFN_HAL_PORT_TARGET": "stm32f417vgtx"
-          }
-        }
-      ]
-    }
-    ```
 
 ---
 
@@ -123,11 +100,11 @@ While this library is no Mondrian, it deals with a different form of **abstracti
 
 Whether **Caffeine** is fueling an elegant embedded project or just helping you wake up your hardware, you can contribute in the following ways:
 
-* **Star & Share:** If you find this project useful, give it a ⭐ on GitHub and share it with your fellow firmware engineers. It helps others find the library and grows the Caffeine community.
-* **Show & Tell:** If you are using Caffeine in a project (personal or professional), **let me know!** Hearing how it's being used is a huge motivator.
-* **Propose Features:** If the library is missing a specific "brushstroke," let's design the interface together.
-* **Port New Targets:** Help us expand the collection by porting the HAL to new silicon or peripheral sets.
-* **Expand the HIL Lab:** Contributions go primarily toward acquiring new development boards. These serve as dedicated **Hardware-in-the-Loop** test targets, ensuring every commit remains rock-solid across our entire fleet of supported hardware.
+*   **Star and Share:** If you find this project useful, give it a ⭐ on GitHub and share it with your fellow firmware engineers. It helps others find the library and grows the Caffeine community.
+*   **Show and Tell:** If you are using Caffeine in a project (personal or professional), let me know! Hearing how it's being used is a motivator.
+*   **Propose Features:** If the library is missing a specific "brushstroke," let's design the interface together.
+*   **Port New Targets:** Help us expand the collection by porting the HAL to new silicon or peripheral sets.
+*   **Expand the HIL Lab:** Contributions go primarily toward acquiring new development boards. These serve as dedicated **Hardware-in-the-Loop** test targets, ensuring every commit remains rock-solid across our entire fleet of supported hardware.
 
 **If my projects helped you, feel free to buy me a brew. Or if it caused you an extra debugging session, open a PR!**
 
@@ -143,7 +120,6 @@ Whether **Caffeine** is fueling an elegant embedded project or just helping you 
 </a>
 
 ---
-
 
 ## License
 
