@@ -14,7 +14,8 @@ jobs:
     name: Discovery
     runs-on: ubuntu-24.04
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      universe: ${{ steps.set-matrix.outputs.universe }}
+      hardware: ${{ steps.set-matrix.outputs.hardware }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -23,8 +24,9 @@ jobs:
         name: Generate Preset Matrix
         run: |
           chmod +x ./caffeine-build/scripts/*.sh
-          MATRIX=$(./caffeine-build/scripts/ci.sh list)
-          echo "matrix=${MATRIX}" >> $GITHUB_OUTPUT
+          RAW_MATRIX=$(./caffeine-build/scripts/ci.sh list)
+          echo "universe=$(echo $RAW_MATRIX | jq -c .universe)" >> $GITHUB_OUTPUT
+          echo "hardware=$(echo $RAW_MATRIX | jq -c .hardware)" >> $GITHUB_OUTPUT
 
   lint-format:
     name: Format
@@ -33,7 +35,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        preset: ${{ fromJson(needs.discover.outputs.matrix) }}
+        preset: ${{ fromJson(needs.discover.outputs.universe) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,7 +50,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        preset: ${{ fromJson(needs.discover.outputs.matrix) }}
+        preset: ${{ fromJson(needs.discover.outputs.universe) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -63,7 +65,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        preset: ${{ fromJson(needs.discover.outputs.matrix) }}
+        preset: ${{ fromJson(needs.discover.outputs.hardware) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -78,7 +80,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        preset: ${{ fromJson(needs.discover.outputs.matrix) }}
+        preset: ${{ fromJson(needs.discover.outputs.hardware) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -93,7 +95,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        preset: ${{ fromJson(needs.discover.outputs.matrix) }}
+        preset: ${{ fromJson(needs.discover.outputs.hardware) }}
     steps:
       - uses: actions/checkout@v4
         if: ${{ matrix.preset.tests }}
