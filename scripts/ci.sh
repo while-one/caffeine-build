@@ -93,8 +93,13 @@ run_stage() {
     
     case "$STAGE" in
         format)
-            echo ">>> [Format] Validating Preset: $PRESET"
-            $BUILD_SCRIPT --clean "$PRESET" "${PROJECT_NAME}-format" -DFORMAT_DRY_RUN=ON "${EXTRA_BUILD_ARGS[@]}"
+            # Use universe target if available, otherwise fallback to standard format
+            local TARGET="${PROJECT_NAME}-format"
+            if [ "$PRESET" == "ci-all-sources" ]; then
+                TARGET="${PROJECT_NAME}-universe-format"
+            fi
+            echo ">>> [Format] Validating Preset: $PRESET (Target: $TARGET)"
+            $BUILD_SCRIPT --clean "$PRESET" "$TARGET" -DFORMAT_DRY_RUN=ON "${EXTRA_BUILD_ARGS[@]}"
             ;;
         analyze)
             echo ">>> [Analyze] Validating Preset: $PRESET"
@@ -114,7 +119,6 @@ run_stage() {
         doc)
             # Run doxygen documentation target. 
             echo ">>> [Docs] Validating Preset: $PRESET"
-            # Target is usually <project>-docs
             $BUILD_SCRIPT "$PRESET" "${PROJECT_NAME}-docs" "${EXTRA_BUILD_ARGS[@]}"
             ;;
         *)
@@ -154,9 +158,28 @@ if [ "$COMMAND" == "all" ]; then
     echo "--------------------------------------------------------------------------------"
     echo " Starting Unified CI (Sequential) for project: $PROJECT_NAME"
     echo "--------------------------------------------------------------------------------"
-    for P in $ALL_PRESETS; do
-        run_stage "$P" format
-        run_stage "$P" doc
+    
+    # 1. Global Stages (Optimization: Run once for all sources if preset exists)
+    HAS_UNIVERSE=false
+    if echo "$ALL_PRESETS" | grep -q "ci-all-sources"; then
+        echo ">>> Detected 'ci-all-sources' preset. Running global stages..."
+        HAS_UNIVERSE=true
+        run_stage "ci-all-sources" format
+        run_stage "ci-all-sources" doc
+        # Filter out the universe preset for the matrix loop
+        MATRIX_PRESETS=$(echo "$ALL_PRESETS" | grep -v "ci-all-sources")
+    else
+        echo ">>> No 'ci-all-sources' preset found. Falling back to matrix-based global stages."
+        MATRIX_PRESETS=$ALL_PRESETS
+    fi
+
+    # 2. Matrix Stages (Analyze, Build, Test)
+    for P in $MATRIX_PRESETS; do
+        if [ "$HAS_UNIVERSE" = false ]; then
+            # If no universe preset, we must run format/doc in the loop
+            run_stage "$P" format
+            run_stage "$P" doc
+        fi
         run_stage "$P" analyze
         run_stage "$P" build
         run_stage "$P" test
