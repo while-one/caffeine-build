@@ -259,7 +259,7 @@ endfunction()
 function(cfn_add_docs TARGET_NAME)
     set(options)
     set(oneValueArgs COMMENT)
-    set(multiValueArgs INPUTS)
+    set(multiValueArgs INPUTS EXCLUDE_PATTERNS)
     cmake_parse_arguments(ARGS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     find_package(Doxygen)
@@ -272,6 +272,10 @@ function(cfn_add_docs TARGET_NAME)
         set(DOXYGEN_GENERATE_LATEX NO)
         set(DOXYGEN_OPTIMIZE_OUTPUT_FOR_C YES)
         set(DOXYGEN_EXTRACT_ALL YES)
+        
+        if(ARGS_EXCLUDE_PATTERNS)
+            set(DOXYGEN_EXCLUDE_PATTERNS ${ARGS_EXCLUDE_PATTERNS})
+        endif()
 
         # Ensure we point to the project README as the main page if it exists
         if(EXISTS "${PROJECT_SOURCE_DIR}/README.md")
@@ -281,7 +285,6 @@ function(cfn_add_docs TARGET_NAME)
         doxygen_add_docs(
             ${TARGET_NAME}
             ${ARGS_INPUTS}
-            COMMENT "${ARGS_COMMENT}"
         )
 
         # Create .nojekyll in the output directory after Doxygen runs
