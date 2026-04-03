@@ -94,12 +94,12 @@ run_stage() {
     case "$STAGE" in
         format)
             # Use universe target if available, otherwise fallback to standard format
-            local TARGET="${PROJECT_NAME}-format"
-            if [ "$PRESET" == "ci-all-sources" ]; then
-                TARGET="${PROJECT_NAME}-universe-format"
+            local TARGET="${PROJECT_NAME}-check-format"
+            if [ "$PRESET" == "universe-all-sources" ]; then
+                TARGET="${PROJECT_NAME}-universe-check-format"
             fi
             echo ">>> [Format] Validating Preset: $PRESET (Target: $TARGET)"
-            $BUILD_SCRIPT --clean "$PRESET" "$TARGET" -DFORMAT_DRY_RUN=ON "${EXTRA_BUILD_ARGS[@]}"
+            $BUILD_SCRIPT --clean "$PRESET" "$TARGET" "${EXTRA_BUILD_ARGS[@]}"
             ;;
         analyze)
             echo ">>> [Analyze] Validating Preset: $PRESET"
@@ -161,15 +161,15 @@ if [ "$COMMAND" == "all" ]; then
     
     # 1. Global Stages (Optimization: Run once for all sources if preset exists)
     HAS_UNIVERSE=false
-    if echo "$ALL_PRESETS" | grep -q "ci-all-sources"; then
-        echo ">>> Detected 'ci-all-sources' preset. Running global stages..."
+    if echo "$ALL_PRESETS" | grep -q "universe-all-sources"; then
+        echo ">>> Detected 'universe-all-sources' preset. Running global stages..."
         HAS_UNIVERSE=true
-        run_stage "ci-all-sources" format
-        run_stage "ci-all-sources" doc
+        run_stage "universe-all-sources" format
+        run_stage "universe-all-sources" doc
         # Filter out the universe preset for the matrix loop
-        MATRIX_PRESETS=$(echo "$ALL_PRESETS" | grep -v "ci-all-sources")
+        MATRIX_PRESETS=$(echo "$ALL_PRESETS" | grep -v "universe-all-sources")
     else
-        echo ">>> No 'ci-all-sources' preset found. Falling back to matrix-based global stages."
+        echo ">>> No 'universe-all-sources' preset found. Falling back to matrix-based global stages."
         MATRIX_PRESETS=$ALL_PRESETS
     fi
 
