@@ -53,6 +53,14 @@ To minimize CI overhead, the framework introduces the **Universe Target** patter
 
 ---
 
+## Documentation
+
+The API reference for the framework's core macros and tooling is generated automatically via Doxygen and hosted on GitHub Pages.
+
+📚 **[View the Caffeine-Build Documentation](https://while-one.github.io/caffeine-build)**
+
+---
+
 ## Core Macro Reference (`CaffeineMacros.cmake`)
 
 ### `cfn_apply_target_architecture()`
@@ -118,14 +126,6 @@ Whether **Caffeine** is fueling an elegant embedded project or just helping you 
 <a href="https://github.com/while-one/caffeine-build/compare" target="_blank">
 <img src="https://img.shields.io/badge/Open%20a%20PR--orange?style=for-the-badge&logo=github&logoColor=white" height="40" style="border-radius: 5px;">
 </a>
-
----
-
-## Documentation
-
-The API reference for the framework's core macros and tooling is generated automatically via Doxygen and hosted on GitHub Pages.
-
-📚 **[View the Caffeine-Build Documentation](https://while-one.github.io/caffeine-build)**
 
 ---
 
