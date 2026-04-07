@@ -121,6 +121,14 @@ Whether **Caffeine** is fueling an elegant embedded project or just helping you 
 
 ---
 
+## Documentation
+
+The API reference for the framework's core macros and tooling is generated automatically via Doxygen and hosted on GitHub Pages.
+
+📚 **[View the Caffeine-Build Documentation](https://while-one.github.io/caffeine-build)**
+
+---
+
 ## License
 
 This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.

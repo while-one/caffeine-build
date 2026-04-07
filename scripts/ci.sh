@@ -25,7 +25,7 @@ show_help() {
     echo "Commands:"
     echo "  all                 Run format, analyze, build, test, and doc stages for all presets"
     echo "  list                Generate a JSON list of available presets (for GitHub Actions)"
-    echo "  format              Run clang-format check"
+    echo "  format              Run clang-format check (dry-run, will NOT modify files)"
     echo "  analyze             Run clang-tidy and cppcheck"
     echo "  build               Run compilation"
     echo "  test                Run unit tests"
