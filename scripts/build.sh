@@ -32,12 +32,18 @@ show_help() {
     echo "  # Simple build"
     echo "  ./caffeine-build/scripts/build.sh linux-native all"
     echo ""
+    echo "  # Apply format fixes to all sources in the repository"
+    echo "  ./caffeine-build/scripts/build.sh universe-all-sources <project_name>-universe-format"
+    echo ""
+    echo "  # Generate API documentation for all sources"
+    echo "  ./caffeine-build/scripts/build.sh universe-all-sources <project_name>-docs"
+    echo ""
     echo "  # Clean build for cross-compilation"
     echo "  ./caffeine-build/scripts/build.sh --clean stm32f407-release"
     echo ""
     echo "  # Build with local dependency override"
-    echo "  ./caffeine-build/scripts/build.sh --mount $(pwd)/../caffeine-hal:/caffeine-hal stm32f4-mock-tests-local"
-}
+    echo "  ./caffeine-build/scripts/build.sh --mount \$(pwd)/../caffeine-hal:/caffeine-hal stm32f4-mock-tests-local"
+    }
 
 # Parse arguments
 while [[ "$#" -gt 0 ]]; do

@@ -53,6 +53,14 @@ To minimize CI overhead, the framework introduces the **Universe Target** patter
 
 ---
 
+## Documentation
+
+The API reference for the framework's core macros and tooling is generated automatically via Doxygen and hosted on GitHub Pages.
+
+📚 **[View the Caffeine-Build Documentation](https://while-one.github.io/caffeine-build)**
+
+---
+
 ## Core Macro Reference (`CaffeineMacros.cmake`)
 
 ### `cfn_apply_target_architecture()`
