@@ -23,6 +23,18 @@
       }
     },
     {
+      "name": "base-compliance",
+      "hidden": true,
+      "displayName": "Caffeine Compliance (Native Host)",
+      "description": "Standardized host-based configuration for static analysis and C11 compliance",
+      "inherits": "base-common",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/compliance",
+      "cacheVariables": {
+        "CFN_BUILD_TESTS": "OFF"
+      }
+    },
+    {
       "name": "base-hardware-defaults",
       "hidden": true,
       "cacheVariables": {
