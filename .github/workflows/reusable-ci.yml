@@ -65,12 +65,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        preset: ${{ fromJson(needs.discover.outputs.universe) }}
+        preset: ${{ fromJson(needs.discover.outputs.hardware) }}
     steps:
       - uses: actions/checkout@v4
+        if: ${{ !matrix.preset.tests }}
         with:
           submodules: ${{ inputs.submodules }}
       - name: Run Static Analysis
+        if: ${{ !matrix.preset.tests }}
         run: ./caffeine-build/scripts/ci.sh analyze ${{ matrix.preset.name }}
 
   compilation:
