@@ -139,7 +139,7 @@ docker pull "$IMAGE_NAME" || {
 # --- 5. Build Command Construction ---
 if [ -f "CMakePresets.json" ]; then
     if [[ "$TARGET" == ctest* ]]; then
-        CMD="$TARGET"
+        CMD="cd $BINARY_DIR && $TARGET"
     else
         CMD="cmake --preset $PRESET ${EXTRA_ARGS[*]} && \
              cmake --build $BINARY_DIR --target $TARGET"
