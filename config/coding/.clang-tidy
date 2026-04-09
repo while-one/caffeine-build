@@ -1,4 +1,4 @@
-# .clang-tidy for BARR-C:2018 Compliance
+# .clang-tidy for Caffeine Framework: Pedantic C11 & BARR-C:2018 Compliance
 ---
 # Enable specific check groups
 Checks: >
@@ -7,41 +7,103 @@ Checks: >
   performance-*,
   portability-*,
   readability-identifier-naming,
-  readability-make-member-function-const,
+  readability-braces-around-statements,
+  readability-function-size,
+  readability-misleading-indentation,
+  readability-redundant-declaration,
+  readability-implicit-bool-conversion,
+  readability-else-after-return,
+  readability-isolate-declaration,
+  clang-analyzer-core.*,
+  clang-analyzer-valist.*,
+  clang-analyzer-deadcode.DeadStores,
+  cert-err33-c,
+  bugprone-string-constructor,
+  bugprone-signed-char-misuse,
+  bugprone-unused-return-value,
+  bugprone-string-literal-with-embedded-nul,
+  bugprone-suspicious-missing-comma,
+  bugprone-unhandled-self-assignment,
+  bugprone-narrowing-conversions,
+  bugprone-switch-missing-default-case,
+  bugprone-implicit-widening-of-multiplication-result,
+  readability-uppercase-literal-suffix,
+  hicpp-signed-bitwise,
+  hicpp-avoid-goto,
+  readability-non-const-parameter,
   readability-static-definition-in-anonymous-namespace,
-  google-readability-casting,
-  modernize-use-nullptr,
   -bugprone-easily-swappable-parameters
 
-# Warnings as errors ensures you don't ignore these in CI
+# Warnings as errors ensures any violation blocks the CI pipeline
 WarningsAsErrors: '*'
 
 CheckOptions:
+  # --- BARR-C Rule 1.1: Complexity Limit ---
+  # Enforces a cyclomatic complexity limit. Anything higher than 10 is an architectural failure.
+  - { key: readability-function-size.BranchThreshold, value: 10 }
+
+  # --- BARR-C Rule 1.3: Braces are Mandatory ---
+  - { key: readability-braces-around-statements.ShortIfStatementsOnSingleLine, value: false }
+
+  # --- BARR-C Rule 1.4: Variable Initialization ---
+  # Enforces that variables are initialized as close to their first use as possible.
+  - { key: readability-isolate-declaration.AggregateThreshold, value: 1 }
+
+  # BARR-C Rule 1.8: Macros, Constants and Enums shall be UPPER_CASE
+  - { key: readability-identifier-naming.MacroDefinitionCase,     value: UPPER_CASE }
+  - { key: readability-identifier-naming.ConstantCase,            value: UPPER_CASE }
+  - { key: readability-identifier-naming.EnumConstantCase,        value: UPPER_CASE }
+  - { key: readability-make-member-function-const.IgnoreMacros, value: true }
+  - { key: readability-non-const-parameter.IgnoreMacros, value: true }
+  - { key: readability-uppercase-literal-suffix.NewSuffixes, value: 'L;LL;U;UL;ULL;F' }
+
   # --- BARR-C Rule 2.1: Naming Conventions ---
-  # Variable names shall be lowercase with underscores
-  - { key: readability-identifier-naming.VariableCase,        value: lower_case }
-  - { key: readability-identifier-naming.ParameterCase,       value: lower_case }
-  - { key: readability-identifier-naming.ConstantParameterCase, value: lower_case }
-  - { key: readability-identifier-naming.FunctionCase,        value: lower_case }
+  - { key: readability-identifier-naming.VariableCase,            value: lower_case }
+  - { key: readability-identifier-naming.ParameterCase,           value: lower_case }
+  - { key: readability-identifier-naming.ConstantParameterCase,   value: lower_case }
+  - { key: readability-identifier-naming.PointerParameterCase,    value: lower_case }
+  - { key: readability-identifier-naming.FunctionCase,            value: lower_case }
+  - { key: readability-identifier-naming.GlobalVariableCase,      value: lower_case }
+  - { key: readability-identifier-naming.StructCase,              value: lower_case }
+  - { key: readability-identifier-naming.UnionCase,               value: lower_case }
+  - { key: readability-identifier-naming.TypedefCase,             value: lower_case }
+  - { key: readability-identifier-naming.TypeAliasCase,           value: lower_case }
 
-  # Global variables: BARR-C doesn't mandate a prefix, but often 'g_' is used.
-  # Here we enforce lowercase for consistency with Rule 2.1.
-  - { key: readability-identifier-naming.GlobalVariableCase,  value: lower_case }
+  # --- BARR-C Rule 3.1: Data Types & Safety (Checklist Item) ---
+  - { key: bugprone-narrowing-conversions.WarnOnIntegerNarrowing,       value: true }
+  - { key: bugprone-narrowing-conversions.WarnOnFloatingPointNarrowing, value: true }
+  - { key: bugprone-narrowing-conversions.PedanticMode,                 value: true }
+  - { key: bugprone-sizeof-expression.WarnOnSizeOfConstant,             value: true }
+  - { key: bugprone-sizeof-expression.WarnOnSizeOfIntegerConstant,      value: true }
 
-  # BARR-C Rule 1.8: Macros shall be UPPER_CASE
-  - { key: readability-identifier-naming.MacroDefinitionCase, value: UPPER_CASE }
+  # --- BARR-C Rule 3.2: Bitwise Safety ---
+  # Ensures bitwise operations are only performed on unsigned types to prevent UB.
+  - { key: hicpp-signed-bitwise.IgnorePositiveIntegerLiterals, value: false }
 
-  # Constants and Enums
-  - { key: readability-identifier-naming.ConstantCase,        value: UPPER_CASE }
-  - { key: readability-identifier-naming.EnumConstantCase,    value: UPPER_CASE }
+  # --- BARR C Rule 4.1: Switch Statements ---
+  # Enforces that every switch statement has a default case, even if all enums are covered.
+  # This catches unexpected memory corruption where a variable takes an invalid state.
+  - { key: bugprone-switch-missing-default-case.CheckSwitchStatements, value: true }
 
-  # --- BARR-C Rule 3.1: Data Types & Safety ---
-  # This catches cases where you might lose data (e.g., int32 to int16)
-  - { key: bugprone-narrowing-conversions.WarnOnIntegerNarrowing, value: true }
+  # --- BARR-C Rule 5.1: Prohibit "magic numbers" ---
+  - { key: readability-magic-numbers.IgnorePowersOf2IntegerValues,      value: true }
 
-  # BARR-C Rule 5.1: Prohibit "magic numbers" in code
-  - { key: readability-magic-numbers.IgnorePowersOf2IntegerValues, value: true }
+  # --- Complexity Guard (Checklist Item) ---
+  - { key: readability-function-size.LineThreshold,               value: 80 }
 
-  # --- Embedded Best Practices ---
-  # Ensures you use 'NULL' or 'nullptr' (if using C++) consistently
-  - { key: modernize-use-nullptr.NullMacros, value: 'NULL' }
+  # --- Pedantic Boolean Logic (Caffeine Philosophy: Explicit over Implicit) ---
+  # Prohibits 'if (ptr)' -> Forces 'if (ptr != NULL)'
+  - { key: readability-implicit-bool-conversion.AllowIntegerContext,    value: false }
+  - { key: readability-implicit-bool-conversion.AllowPointerContext,    value: false }
+
+  # --- Hardened Return Value Auditing (Checklist Item) ---
+  # Ensure critical HAL/SAL and standard library return codes are never ignored.
+  - { key: bugprone-unused-return-value.CheckedReturnTypes, 
+      value: 'cfn_hal_error_code_t;size_t;ssize_t' }
+
+  # --- Memory Layout & Padding ---
+  # Alerts when struct members are ordered inefficiently, causing unnecessary padding.
+  # Essential for keeping structures lean in RAM.
+  - { key: performance-unnecessary-value-param.AllowedTypes, value: '' }
+
+

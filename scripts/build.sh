@@ -84,10 +84,10 @@ if [ -f "CMakePresets.json" ]; then
     PRESET_INFO=$(cmake --preset "$PRESET" -N 2>/dev/null || true)
     
     if [ -n "$PRESET_INFO" ]; then
-        STAGE=$(echo "$PRESET_INFO" | grep "CAFFEINE_BUILD_STAGE" | cut -d'=' -f2 | tr -d '"' | xargs)
+        STAGE=$(echo "$PRESET_INFO" | grep "CAFFEINE_BUILD_STAGE" | cut -d'=' -f2 | tr -d '"' | xargs || true)
         # Extract binary directory from 'builds in' line
         # CMake output: "  builds in "/home/user/repo/build/preset""
-        BINARY_DIR=$(echo "$PRESET_INFO" | grep "builds in" | sed 's/.*builds in "\(.*\)"/\1/' | xargs)
+        BINARY_DIR=$(echo "$PRESET_INFO" | grep "builds in" | sed 's/.*builds in "\(.*\)"/\1/' | xargs || true)
     fi
 fi
 
@@ -164,10 +164,30 @@ if [ "$CLEAN_BUILD" = true ]; then
     CLEAN_CMD="rm -rf $LOCAL_BINARY_DIR && "
 fi
 
+set +e
 docker run --rm \
     --user "$(id -u):$(id -g)" \
     -v "$(pwd)":/work \
     "${DOCKER_MOUNTS[@]}" \
     -w /work \
     "$IMAGE_NAME" \
-    bash -c "${CLEAN_CMD}$CMD"
+    bash -c "${CLEAN_CMD}$CMD" 2>&1 | sed -u -e '/error:/s/.*/\x1b[1;31m&\x1b[0m/' \
+                                         -e '/warning:/s/.*/\x1b[38;5;208m&\x1b[0m/' \
+                                         -e '/style:/s/.*/\x1b[1;33m&\x1b[0m/' \
+                                         -e '/note:/s/.*/\x1b[38;5;135m&\x1b[0m/'
+EXIT_CODE=${PIPESTATUS[0]}
+set -e
+
+# --- 7. Summary ---
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+echo "--------------------------------------------------------------------------------"
+if [ $EXIT_CODE -eq 0 ]; then
+    echo -e "${GREEN}All builds passed${NC}"
+else
+    echo -e "${RED}Target failed: $TARGET ($PRESET)${NC}"
+    exit $EXIT_CODE
+fi
+echo "--------------------------------------------------------------------------------"

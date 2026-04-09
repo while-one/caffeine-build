@@ -43,6 +43,39 @@ COMMAND=""
 SPECIFIC_PRESET=""
 EXTRA_BUILD_ARGS=()
 
+# Colors for summary
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+# Track current target for summary
+CURRENT_STAGE=""
+CURRENT_PRESET=""
+
+print_summary() {
+    local EXIT_CODE=$?
+    # Don't print summary for "list" command or if help was shown
+    if [ "$COMMAND" == "list" ] || [ -z "$COMMAND" ]; then
+        exit $EXIT_CODE
+    fi
+
+    echo "--------------------------------------------------------------------------------"
+    if [ $EXIT_CODE -eq 0 ]; then
+        echo -e "${GREEN}All builds passed${NC}"
+    else
+        # Fallback to COMMAND and SPECIFIC_PRESET if CURRENT_* are not set (e.g. failure before run_stage)
+        local FAILED_STAGE="${CURRENT_STAGE:-$COMMAND}"
+        local FAILED_PRESET="${CURRENT_PRESET:-$SPECIFIC_PRESET}"
+        if [ -n "$FAILED_PRESET" ]; then
+            echo -e "${RED}Target failed: $FAILED_STAGE ($FAILED_PRESET)${NC}"
+        else
+            echo -e "${RED}Target failed: $FAILED_STAGE${NC}"
+        fi
+    fi
+    echo "--------------------------------------------------------------------------------"
+}
+trap print_summary EXIT
+
 while [[ "$#" -gt 0 ]]; do
     case "$1" in
         --help|-h) show_help; exit 0 ;;
@@ -90,6 +123,8 @@ ALL_PRESETS=$(cmake --list-presets | grep -oP '(?<=")[^"]+(?=")' | grep -v "^bas
 run_stage() {
     local PRESET=$1
     local STAGE=$2
+    CURRENT_PRESET=$PRESET
+    CURRENT_STAGE=$STAGE
     
     # Query preset metadata
     local PRESET_INFO=$(cmake --preset "$PRESET" -N 2>/dev/null || true)
@@ -183,9 +218,13 @@ if [ "$COMMAND" == "all" ]; then
     # 1. Discover Roles
     UNIVERSE_PRESET=""
     HARDWARE_PRESETS=()
+    TEST_PRESETS=()
     for P in $ALL_PRESETS; do
-        if cmake --preset "$P" -N 2>/dev/null | grep -q 'CAFFEINE_UNIVERSE_TARGET="ON"'; then
+        PRESET_META=$(cmake --preset "$P" -N 2>/dev/null || true)
+        if echo "$PRESET_META" | grep -q 'CAFFEINE_UNIVERSE_TARGET="ON"'; then
             UNIVERSE_PRESET="$P"
+        elif echo "$PRESET_META" | grep -q 'CFN_BUILD_TESTS="ON"'; then
+            TEST_PRESETS+=("$P")
         else
             HARDWARE_PRESETS+=("$P")
         fi
@@ -201,6 +240,7 @@ if [ "$COMMAND" == "all" ]; then
     fi
 
     # 3. Matrix Stages (Analyze, Build, Test)
+    # Hardware/Production Presets
     for P in ${HARDWARE_PRESETS[@]}; do
         if [ -z "$UNIVERSE_PRESET" ]; then
             # If no universe preset, we must run format/doc in the loop
@@ -208,6 +248,12 @@ if [ "$COMMAND" == "all" ]; then
             run_stage "$P" doc
         fi
         run_stage "$P" analyze
+        run_stage "$P" build
+        run_stage "$P" test
+    done
+
+    # Test-only Presets (Skip Analyze)
+    for P in ${TEST_PRESETS[@]}; do
         run_stage "$P" build
         run_stage "$P" test
     done
