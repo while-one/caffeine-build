@@ -155,7 +155,7 @@ run_stage() {
             # Run the test preset if it exists (standardized matching-name convention)
             if cmake --list-presets=test | grep -q "\"$PRESET\""; then
                 echo ">>> [Test] Validating Preset: $PRESET"
-                $BUILD_SCRIPT "$PRESET" "ctest --preset $PRESET" "${EXTRA_BUILD_ARGS[@]}"
+                $BUILD_SCRIPT "$PRESET" "ctest --output-on-failure" "${EXTRA_BUILD_ARGS[@]}"
             fi
             ;;
         doc)
