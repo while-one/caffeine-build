@@ -23,8 +23,7 @@ jobs:
       - id: set-matrix
         name: Generate Preset Matrix
         run: |
-          chmod +x ./caffeine-build/scripts/*.sh
-          RAW_MATRIX=$(./caffeine-build/scripts/ci.sh list)
+          RAW_MATRIX=$(python3 ./caffeine-build/scripts/ci.py list)
           echo "universe=$(echo $RAW_MATRIX | jq -c .universe)" >> $GITHUB_OUTPUT
           echo "hardware=$(echo $RAW_MATRIX | jq -c .hardware)" >> $GITHUB_OUTPUT
 
@@ -41,7 +40,7 @@ jobs:
         with:
           submodules: ${{ inputs.submodules }}
       - name: Check Formatting
-        run: ./caffeine-build/scripts/ci.sh format ${{ matrix.preset.name }}
+        run: python3 ./caffeine-build/scripts/ci.py format ${{ matrix.preset.name }}
 
   documentation:
     name: Docs
@@ -56,7 +55,7 @@ jobs:
         with:
           submodules: ${{ inputs.submodules }}
       - name: Build Documentation
-        run: ./caffeine-build/scripts/ci.sh doc ${{ matrix.preset.name }}
+        run: python3 ./caffeine-build/scripts/ci.py doc ${{ matrix.preset.name }}
 
   static-analysis:
     name: Analysis
@@ -65,15 +64,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        preset: ${{ fromJson(needs.discover.outputs.hardware) }}
+        preset: ${{ fromJson(needs.discover.outputs.universe) }}
     steps:
       - uses: actions/checkout@v4
-        if: ${{ !matrix.preset.tests }}
         with:
           submodules: ${{ inputs.submodules }}
       - name: Run Static Analysis
-        if: ${{ !matrix.preset.tests }}
-        run: ./caffeine-build/scripts/ci.sh analyze ${{ matrix.preset.name }}
+        run: python3 ./caffeine-build/scripts/ci.py analyze ${{ matrix.preset.name }}
 
   build-and-test:
     name: Build & Test
@@ -88,7 +85,7 @@ jobs:
         with:
           submodules: ${{ inputs.submodules }}
       - name: Build All Targets
-        run: ./caffeine-build/scripts/ci.sh build ${{ matrix.preset.name }}
+        run: python3 ./caffeine-build/scripts/ci.py build ${{ matrix.preset.name }}
       - name: Run Unit Tests
         if: ${{ matrix.preset.tests }}
-        run: ./caffeine-build/scripts/ci.sh test ${{ matrix.preset.name }}
+        run: python3 ./caffeine-build/scripts/ci.py test ${{ matrix.preset.name }}

@@ -47,8 +47,10 @@ To minimize CI overhead, the framework introduces the **Universe Target** patter
 *   `cmake/presets/`: Centralized CMake presets. `base.json` defines standard configurations for ARM, RISC-V, and Native builds.
 *   `cmake/toolchains/`: CMake toolchain files for cross-compilation (e.g., `arm-gcc.cmake`).
 *   `cmake/CaffeineMacros.cmake`: The core framework logic engine. Contains all shared build and quality gate functions.
-*   `scripts/build.sh`: Containerized build orchestrator. Maps local PWD to `/work` in Docker and handles architecture detection.
-*   `scripts/ci.sh`: Unified CI orchestrator. Manages sequential or parallel quality gates (Format, Analyze, Build, Test, Doc).
+*   `scripts/build.py`: Containerized build orchestrator. Maps local PWD to `/work` in Docker and handles architecture detection.
+*   `scripts/ci.py`: Unified CI orchestrator. Manages sequential or parallel quality gates (Format, Analyze, Build, Test, Doc).
+*   `scripts/local_dev.py`: Helper to generate `CMakeUserPresets.json` for local dependency overrides.
+*   `scripts/run_local_ci.py`: Orchestrates `act` to run GHA workflows locally with host user preservation.
 *   `config/coding/`: Standards definitions (`.clang-format`, `.clang-tidy`, `cppcheck-suppressions.txt`).
 
 ---
@@ -84,20 +86,32 @@ The API reference for the framework's core macros and tooling is generated autom
 ## Usage & Workflows
 
 ### Unified Build Orchestration
-Use `build.sh` to trigger compilation inside the standardized Caffeine Docker environment:
+Use `build.py` to trigger compilation inside the standardized Caffeine Docker environment:
 ```bash
 # Build for a specific target with a clean state
-./caffeine-build/scripts/build.sh --clean stm32f417vg-release all
+python3 ./caffeine-build/scripts/build.py --clean --preset stm32f417vg-release --target all
 
-# Build using local dependency overrides (Local Mounts)
-./caffeine-build/scripts/build.sh --mount $(pwd)/../caffeine-hal:/caffeine-hal unit-tests-local
+# Build using local dependency overrides (Automounted)
+# 1. Map your local dependency (once)
+python3 ./caffeine-build/scripts/local_dev.py --preset unit-tests-gtest --dep caffeine-hal --path ../caffeine-hal
+# 2. Build with overrides active
+python3 ./caffeine-build/scripts/build.py --use-local --preset unit-tests-gtest --target all
 ```
 
 ### Full CI Validation
 Run the complete quality gate (Format -> Analyze -> Build -> Test -> Doc) locally:
 ```bash
 # Optimized validation using the Universe preset
-./caffeine-build/scripts/ci.sh all
+python3 ./caffeine-build/scripts/ci.py all
+
+# Run CI for a specific preset with local overrides
+python3 ./caffeine-build/scripts/ci.py all unit-tests-gtest --use-local
+```
+
+### Local GHA Simulation (act)
+To run the actual GitHub Action workflows locally while preserving your host user ID:
+```bash
+python3 ./caffeine-build/scripts/run_local_ci.py --job framework-ci
 ```
 
 ---
