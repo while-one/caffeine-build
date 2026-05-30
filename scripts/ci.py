@@ -211,7 +211,9 @@ class CaffeineCI:
         }
         # Fallback: if no universe preset exists, we must fail
         if not matrix["universe"]:
-            print("Error: No universe preset found. The universe is a mandatory architectural concept within Caffeine Framework repositories.")
+            print(
+                "Error: No universe preset found. The universe is a mandatory architectural concept within Caffeine Framework repositories."
+            )
             sys.exit(1)
 
         print(json.dumps(matrix))
@@ -232,9 +234,11 @@ class CaffeineCI:
         # We run these once on the designated universe preset
         universe_presets = self.categories["universe"]
         if not universe_presets:
-            print("Error: No universe preset found. The universe is a mandatory architectural concept within Caffeine Framework repositories.")
+            print(
+                "Error: No universe preset found. The universe is a mandatory architectural concept within Caffeine Framework repositories."
+            )
             sys.exit(1)
-            
+
         global_target_preset = universe_presets[0]["name"]
 
         if global_target_preset:

@@ -15,6 +15,7 @@ def load_all_presets() -> Dict[str, Any]:
                         presets_map[pr["name"]] = pr
                 except json.JSONDecodeError as e:
                     import sys
+
                     print(f"FATAL ERROR: Failed to parse JSON in {p}: {e}")
                     sys.exit(1)
     return presets_map
@@ -50,7 +51,10 @@ def resolve_preset_inheritance(
         # 2. Apply current preset overrides (merge cacheVariables, vendor, etc.)
         for key, value in preset.items():
             if key == "cacheVariables":
-                cast(Dict[str, Any], merged.setdefault("cacheVariables", cast(Dict[str, Any], {}))).update(value)
+                cast(
+                    Dict[str, Any],
+                    merged.setdefault("cacheVariables", cast(Dict[str, Any], {})),
+                ).update(value)
             elif key == "vendor":
                 # For vendor we might just need to do a shallow merge or specific caffeine merge
                 if "vendor" not in merged:
@@ -58,12 +62,18 @@ def resolve_preset_inheritance(
                 for vendor_name, vendor_data in value.items():
                     if vendor_name == "caffeine" and isinstance(vendor_data, dict):
                         # Merge mounts
-                        vendor_dict = cast(Dict[str, Any], merged.setdefault("vendor", cast(Dict[str, Any], {})))
-                        caffeine_dict = cast(Dict[str, Any], vendor_dict.setdefault("caffeine", cast(Dict[str, Any], {})))
-                        caffeine_dict.setdefault("mounts", [])
-                        caffeine_dict["mounts"].extend(
-                            vendor_data.get("mounts", [])
+                        vendor_dict = cast(
+                            Dict[str, Any],
+                            merged.setdefault("vendor", cast(Dict[str, Any], {})),
                         )
+                        caffeine_dict = cast(
+                            Dict[str, Any],
+                            vendor_dict.setdefault(
+                                "caffeine", cast(Dict[str, Any], {})
+                            ),
+                        )
+                        caffeine_dict.setdefault("mounts", [])
+                        caffeine_dict["mounts"].extend(vendor_data.get("mounts", []))
                     else:
                         merged["vendor"][vendor_name] = vendor_data
             else:
