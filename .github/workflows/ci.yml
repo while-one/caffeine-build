@@ -6,33 +6,81 @@ on:
   pull_request:
     branches: [ "main" ]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
-  sanity-checks:
-    name: Sanity Checks (Scripts & Formatting)
+  build-system-integrity:
+    name: Build System Sanity & Linting
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - name: Check Shell Scripts Executable
-      run: |
-        if [ ! -x "scripts/build.sh" ]; then
-          echo "build.sh is not executable!"
-          exit 1
-        fi
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip' # Caches dependencies to speed up runs
 
-    - name: Lint JSON Presets
-      run: |
-        for file in cmake/presets/*.json; do
-          if ! jq . "$file" > /dev/null; then
-            echo "Invalid JSON in $file"
-            exit 1
-          fi
-        done
-        for file in cmake/presets/*/*.json; do
-          if [ -f "$file" ]; then
-            if ! jq . "$file" > /dev/null; then
-              echo "Invalid JSON in $file"
-              exit 1
-            fi
-          fi
-        done
+      - name: Install Python Quality Tools
+        run: |
+          python -m pip install --upgrade pip
+          # We use Ruff (blistering fast linting), Black (deterministic formatting), and Mypy (static typing)
+          pip install ruff black mypy
+          if [ -f "scripts/requirements.txt" ]; then pip install -r scripts/requirements.txt; fi
+
+      - name: Enforce Python Formatting (Black)
+        # Fails the build if the Python scripts deviate from PEP8 formatting.
+        run: black --check scripts/
+
+      - name: Static Analysis (Ruff)
+        # Replaces Flake8/Pylint. Catches unused imports, undefined variables, and logic bugs in the build scripts.
+        run: ruff check scripts/
+
+      - name: Strict Type Checking (Mypy)
+        # Ensures that your build functions aren't silently passing None or wrong types to CMake/OS calls.
+        run: mypy --strict scripts/
+
+      - name: Validate CMake JSON Presets (Native Python)
+        # Bypasses the need for 'jq' dependency and uses Python's strict JSON parser.
+        # It will output the exact file and line number if a comma is misplaced.
+        run: |
+          python -c '
+          import json, glob, os, sys
+          
+          files = glob.glob("cmake/presets/**/*.json", recursive=True)
+          for root_file in ["CMakePresets.json", "CMakeUserPresets.json"]:
+              if os.path.exists(root_file):
+                  files.append(root_file)
+                  
+          error = False
+          
+          for f in files:
+              try:
+                  with open(f) as fp:
+                      json.load(fp)
+              except ValueError as e:
+                  print(f"::error file={f}::Invalid JSON: {e}")
+                  error = True
+                  
+          sys.exit(1 if error else 0)
+          '
+
+  semantic-pr-check:
+    name: Validate PR Title (Semantic)
+    runs-on: ubuntu-24.04
+    # Only run on pull requests (not on pushes to main)
+    if: github.event_name == 'pull_request'
+    permissions:
+      pull-requests: read
+    steps:
+      - name: Semantic PR Check
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

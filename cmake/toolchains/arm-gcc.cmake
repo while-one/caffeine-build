@@ -28,6 +28,12 @@ find_program(CMAKE_RANLIB ${CAFFEINE_TOOLCHAIN_PREFIX}ranlib REQUIRED)
 # Bypass compile checks that require a fully linked executable
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
+# Validate toolchain minimum version
+execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE _GCC_VERSION OUTPUT_STRIP_TRAILING_WHITESPACE)
+if(_GCC_VERSION VERSION_LESS "9.0.0")
+    message(FATAL_ERROR "GCC version ${_GCC_VERSION} is too old. Minimum required is 9.0.0 for C11 support.")
+endif()
+
 # --- Clang-Tidy Support ---
 # Detect the system include paths of the cross-compiler to help Clang-based tools find headers like time.h
 execute_process(
@@ -39,7 +45,7 @@ execute_process(
 # Parse the compiler output to find the system include search paths
 string(REPLACE "\n" ";" _OUTPUT_LINES "${_COMPILER_OUTPUT}")
 set(_IS_SEARCH_PATH FALSE)
-set(_EXTRA_ARGS "-extra-arg=--target=arm-none-eabi")
+set(_EXTRA_ARGS "--extra-arg=--target=arm-none-eabi")
 foreach(_LINE IN LISTS _OUTPUT_LINES)
     if(_LINE MATCHES "#include <...> search starts here:")
         set(_IS_SEARCH_PATH TRUE)
@@ -48,7 +54,7 @@ foreach(_LINE IN LISTS _OUTPUT_LINES)
     elseif(_IS_SEARCH_PATH)
         string(STRIP "${_LINE}" _PATH)
         if(EXISTS "${_PATH}")
-            list(APPEND _EXTRA_ARGS "-extra-arg=-isystem" "-extra-arg=${_PATH}")
+            list(APPEND _EXTRA_ARGS "--extra-arg=-isystem" "--extra-arg=${_PATH}")
         endif()
     endif()
 endforeach()

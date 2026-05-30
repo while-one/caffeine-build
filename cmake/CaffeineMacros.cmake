@@ -29,7 +29,18 @@ macro(cfn_apply_target_architecture)
 endmacro()
 
 # Execute target architecture mapping automatically upon inclusion
-cfn_apply_target_architecture()
+# cfn_apply_target_architecture()
+
+# ==============================================================================
+# Host Toolchain Validation
+# ==============================================================================
+if(NOT CMAKE_CROSSCOMPILING)
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+        if(CMAKE_C_COMPILER_VERSION VERSION_LESS 9.0)
+            message(FATAL_ERROR "Caffeine Framework requires GCC or Clang version 9.0 or higher for host builds (found ${CMAKE_C_COMPILER_VERSION}).")
+        endif()
+    endif()
+endif()
 
 # ==============================================================================
 # Global Compiler Options
@@ -37,7 +48,6 @@ cfn_apply_target_architecture()
 
 # User-configurable flags (with sensible defaults)
 option(CAFFEINE_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" ON)
-set(CAFFEINE_OPTIMIZATION_LEVEL "-Os" CACHE STRING "Compiler optimization level (e.g., -O0, -O2, -Os, -O3)")
 
 # Universal strict warnings and preparation for dead-code elimination
 set(CAFFEINE_COMPILE_OPTIONS
@@ -90,6 +100,8 @@ macro(cfn_add_firmware TARGET_NAME)
             COMMENT "Generating firmware binaries and calculating size for ${TARGET_NAME}"
             VERBATIM
         )
+    else()
+        message(WARNING "CMAKE_OBJCOPY and CMAKE_SIZE not found - firmware targets will not be generated for ${TARGET_NAME}")
     endif()
 endmacro()
 
@@ -254,6 +266,37 @@ function(cfn_add_code_quality_targets TARGET_NAME)
 endfunction()
 
 # ==============================================================================
+# Testing and Coverage Targets
+# ==============================================================================
+
+# Macro to standardise GTest setup
+macro(cfn_add_test_suite TARGET_NAME)
+    set(options)
+    set(oneValueArgs)
+    set(multiValueArgs SOURCES LIBRARIES)
+    cmake_parse_arguments(ARGS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+    if(CFN_BUILD_TESTS)
+        add_executable(${TARGET_NAME} ${ARGS_SOURCES})
+        target_link_libraries(${TARGET_NAME} PRIVATE GTest::gtest_main GTest::gmock ${ARGS_LIBRARIES})
+        include(GoogleTest)
+        gtest_discover_tests(${TARGET_NAME} TIMEOUT 10)
+    endif()
+endmacro()
+
+# Macro to add a coverage target
+function(cfn_add_coverage_target TARGET_NAME)
+    find_program(GCOVR gcovr)
+    if(GCOVR)
+        add_custom_target(
+            ${TARGET_NAME}-coverage
+            COMMAND ${GCOVR} -r ${PROJECT_SOURCE_DIR} --html --html-details -o coverage.html -s
+            COMMENT "Generating coverage report..."
+        )
+    endif()
+endfunction()
+
+# ==============================================================================
 # Documentation Targets
 # ==============================================================================
 # Function to add a Doxygen documentation target
@@ -299,5 +342,11 @@ function(cfn_add_docs TARGET_NAME)
         # In this framework, documentation is mandatory for CI.
         # We fail configuration if Doxygen is missing and we are in a documentation-enabled stage.
         message(WARNING "Doxygen not found - documentation cannot be generated for ${TARGET_NAME}")
+    endif()
+endfunction()ME}")
+    endif()
+endfunction()- documentation cannot be generated for ${TARGET_NAME}")
+    endif()
+endfunction()TARGET_NAME}")
     endif()
 endfunction()
