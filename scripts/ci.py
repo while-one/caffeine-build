@@ -68,6 +68,7 @@ class CaffeineCI:
             if p.exists():
                 try:
                     import json
+
                     with p.open("r") as f:
                         data = json.load(f)
                         for tp in data.get("testPresets", []):
@@ -91,7 +92,9 @@ class CaffeineCI:
 
             # Determine if this preset supports tests by checking if it's in our testPresets list
             base_name = name.replace("-local", "") if name.endswith("-local") else name
-            has_tests = name in test_supported_presets or base_name in test_supported_presets
+            has_tests = (
+                name in test_supported_presets or base_name in test_supported_presets
+            )
             preset_data = {"name": name, "tests": has_tests}
 
             if cache.get("CAFFEINE_UNIVERSE_TARGET", "") == "ON":
