@@ -209,7 +209,7 @@ class CaffeineBuilder:
 
         if self.mode == "test":
             cmd_chain.append(configure_cmd)
-            cmd_chain.append(f"cmake --build --preset {shlex.quote(self.preset_name)}")
+            cmd_chain.append(f"cmake --build {shlex.quote(str(self.binary_dir))}")
             target_arg = shlex.quote(self.target) if self.target != "all" else ""
             cmd_chain.append(
                 f"ctest --preset {shlex.quote(self.preset_name)} --output-on-failure {target_arg}"
@@ -218,7 +218,7 @@ class CaffeineBuilder:
             # Standard Build
             cmd_chain.append(configure_cmd)
             cmd_chain.append(
-                f"cmake --build --preset {shlex.quote(self.preset_name)} --target {shlex.quote(self.target)}"
+                f"cmake --build {shlex.quote(str(self.binary_dir))} --target {shlex.quote(self.target)}"
             )
 
         full_cmd = " && ".join(cmd_chain)
