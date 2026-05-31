@@ -183,7 +183,7 @@ function(cfn_add_code_quality_targets TARGET_NAME)
     if(CLANG_FORMAT AND ARGS_FORMAT_SOURCES)
         # Fixer Target: Automatically applies changes
         add_custom_target(
-            ${TARGET_NAME}-format
+            ${TARGET_NAME}-format-fix
             COMMAND ${CLANG_FORMAT}
             -i
             -style=file:${PROJECT_SOURCE_DIR}/caffeine-build/config/coding/.clang-format
@@ -195,7 +195,7 @@ function(cfn_add_code_quality_targets TARGET_NAME)
 
         # Check Target: Validates without changing files (used by CI)
         add_custom_target(
-            ${TARGET_NAME}-check-format
+            ${TARGET_NAME}-format-check
             COMMAND ${CLANG_FORMAT}
             --dry-run
             --Werror
@@ -210,24 +210,29 @@ function(cfn_add_code_quality_targets TARGET_NAME)
     # 2. Static Analysis (cppcheck)
     find_program(CPPCHECK cppcheck)
     if(CPPCHECK AND ARGS_ANALYSIS_SOURCES)
+        set(_CPPCHECK_FINAL_ARGS
+                ${CFN_CPPCHECK_FLAGS}
+                "--check-level=exhaustive"
+                "--suppress=checkersReport"
+                ${ARGS_CPPCHECK_ARGS}
+        )
+
         if(ARGS_HEADERS_ONLY)
-            set(CPPCHECK_CMD_ARGS ${ARGS_CPPCHECK_ARGS} ${ARGS_ANALYSIS_SOURCES})
+            list(APPEND _CPPCHECK_FINAL_ARGS ${ARGS_ANALYSIS_SOURCES})
         else()
-            set(CPPCHECK_FILTER_ARG "")
+            list(APPEND _CPPCHECK_FINAL_ARGS "--project=${CMAKE_BINARY_DIR}/compile_commands.json")
             if(ARGS_CPPCHECK_FILE_FILTER)
-                set(CPPCHECK_FILTER_ARG "--file-filter=${ARGS_CPPCHECK_FILE_FILTER}")
+                list(APPEND _CPPCHECK_FINAL_ARGS "--file-filter=${ARGS_CPPCHECK_FILE_FILTER}")
             endif()
-            set(CPPCHECK_CMD_ARGS --project=${CMAKE_BINARY_DIR}/compile_commands.json ${CPPCHECK_FILTER_ARG} ${ARGS_CPPCHECK_ARGS})
         endif()
 
         add_custom_target(
-            ${TARGET_NAME}-cppcheck
-            COMMAND ${CPPCHECK}
-            ${CFN_CPPCHECK_FLAGS}
-            ${CPPCHECK_CMD_ARGS}
-            COMMENT "Running cppcheck static analysis..."
-            VERBATIM
+                ${TARGET_NAME}-cppcheck
+                COMMAND ${CPPCHECK} ${_CPPCHECK_FINAL_ARGS}
+                COMMENT "Running cppcheck static analysis..."
+                VERBATIM
         )
+
         if(NOT TARGET ${TARGET_NAME}-analyze)
             add_custom_target(${TARGET_NAME}-analyze COMMENT "Running full static analysis suite...")
         endif()
@@ -250,18 +255,29 @@ function(cfn_add_code_quality_targets TARGET_NAME)
         endif()
 
         add_custom_target(
-            ${TARGET_NAME}-tidy
+            ${TARGET_NAME}-tidy-check
             COMMAND ${CLANG_TIDY}
             --config-file=${PROJECT_SOURCE_DIR}/caffeine-build/config/coding/.clang-tidy
             --header-filter="${TIDY_FILTER}"
             ${TIDY_CMD_ARGS}
             COMMENT "Running clang-tidy static analysis..."
         )
-        
+
+        add_custom_target(
+            ${TARGET_NAME}-tidy-fix
+            COMMAND ${CLANG_TIDY}
+            --fix
+            --format-style=file
+            --config-file=${PROJECT_SOURCE_DIR}/caffeine-build/config/coding/.clang-tidy
+            --header-filter="${TIDY_FILTER}"
+            ${TIDY_CMD_ARGS}
+            COMMENT "Applying clang-tidy auto-fixes to ${TARGET_NAME}..."
+        )
+
         if(NOT TARGET ${TARGET_NAME}-analyze)
             add_custom_target(${TARGET_NAME}-analyze COMMENT "Running full static analysis suite...")
         endif()
-        add_dependencies(${TARGET_NAME}-analyze ${TARGET_NAME}-tidy)
+        add_dependencies(${TARGET_NAME}-analyze ${TARGET_NAME}-tidy-check)
     endif()
 endfunction()
 
@@ -312,11 +328,11 @@ function(cfn_add_docs TARGET_NAME)
         set(DOXYGEN_HTML_OUTPUT docs)
         set(DOXYGEN_RECURSIVE YES)
         set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "${PROJECT_SOURCE_DIR}/README.md")
-        set(DOXYGEN_WARN_AS_ERROR YES)
+        set(DOXYGEN_WARN_AS_ERROR FAIL_ON_WARNINGS)
         set(DOXYGEN_GENERATE_LATEX NO)
         set(DOXYGEN_OPTIMIZE_OUTPUT_FOR_C YES)
         set(DOXYGEN_EXTRACT_ALL YES)
-        
+
         if(ARGS_EXCLUDE_PATTERNS)
             set(DOXYGEN_EXCLUDE_PATTERNS ${ARGS_EXCLUDE_PATTERNS})
         endif()

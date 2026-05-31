@@ -62,6 +62,20 @@ class CaffeineCI:
         categories: Dict[str, Any] = {"universe": [], "hardware": [], "tests": []}
         all_names = []
 
+        # Parse testPresets to find which configurePresets support testing
+        test_supported_presets = set()
+        for p in [Path("CMakePresets.json"), Path("CMakeUserPresets.json")]:
+            if p.exists():
+                try:
+                    import json
+                    with p.open("r") as f:
+                        data = json.load(f)
+                        for tp in data.get("testPresets", []):
+                            if "configurePreset" in tp:
+                                test_supported_presets.add(tp["configurePreset"])
+                except Exception:
+                    pass
+
         for name, preset in presets_map.items():
             if preset.get("hidden", False):
                 continue
@@ -75,7 +89,9 @@ class CaffeineCI:
             all_names.append(name)
             cache = merged.get("cacheVariables", {})
 
-            has_tests = cache.get("CFN_BUILD_TESTS", "") == "ON"
+            # Determine if this preset supports tests by checking if it's in our testPresets list
+            base_name = name.replace("-local", "") if name.endswith("-local") else name
+            has_tests = name in test_supported_presets or base_name in test_supported_presets
             preset_data = {"name": name, "tests": has_tests}
 
             if cache.get("CAFFEINE_UNIVERSE_TARGET", "") == "ON":
@@ -93,9 +109,11 @@ class CaffeineCI:
         # Find preset metadata to check if it's a universe target
         is_universe = any(p["name"] == preset for p in self.categories["universe"])
 
-        # Pedantic Enforcement: format, analyze, doc, and coverage are GLOBAL stages.
+        # Pedantic Enforcement: format, analyze, doc, and lint-python are GLOBAL stages.
         # They should only be used with a universe target.
-        global_stages = ["format", "analyze", "doc", "coverage", "lint-python"]
+        global_stages = ["format", "analyze", "doc", "lint-python"]
+        is_test_preset = any(p["name"] == preset for p in self.categories["tests"])
+
         if stage in global_stages and not is_universe:
             # If we have universe presets, we refuse to run global stages on non-universe targets.
             if self.categories["universe"]:
@@ -105,6 +123,11 @@ class CaffeineCI:
                 return 0
             # Fallback: if no universe preset exists at all, we allow it (best effort)
             pass
+
+        # Coverage requires a test-enabled preset (declared in testPresets)
+        if stage == "coverage" and not is_test_preset:
+            print(f">>> [Skip] Stage '{stage}' requires a test-enabled preset.")
+            return 0
 
         if stage == "lint-python":
             scripts_dir = self.project_root / "caffeine-build" / "scripts"
@@ -121,7 +144,7 @@ class CaffeineCI:
                 sys.exit(1)
 
         target_map = {
-            "format": f"{self.project_name}-universe-check-format",
+            "format": f"{self.project_name}-universe-format-check",
             "analyze": f"{self.project_name}-analyze",
             "build": "all",
             "test": "all",
@@ -151,6 +174,11 @@ class CaffeineCI:
 
         # Clean for format stage to ensure fresh check
         if stage == "format":
+            cmd.append("--clean")
+
+        # To prevent CMakeCache.txt absolute path conflicts when jumping between
+        # host execution and container execution, always clean during CI validation.
+        if stage in ["build", "test", "coverage", "analyze", "doc", "compliance"]:
             cmd.append("--clean")
 
         for m in self.mounts:
@@ -246,16 +274,16 @@ class CaffeineCI:
             exit_code |= self.run_stage(global_target_preset, "format")
             exit_code |= self.run_stage(global_target_preset, "analyze")
             exit_code |= self.run_stage(global_target_preset, "doc")
-            exit_code |= self.run_stage(global_target_preset, "coverage")
 
-        # 2. Matrix Stages (Build, Test)
-        # Analyze is now global, so we only run build and test here.
+        # 2. Matrix Stages (Build, Test, Coverage)
+        # Analyze is now global, so we only run build, test, and coverage here.
         for p_data in self.categories["hardware"] + self.categories["tests"]:
             p = p_data["name"]
             exit_code |= self.run_stage(p, "build")
 
             if p_data["tests"]:
                 exit_code |= self.run_stage(p, "test")
+                exit_code |= self.run_stage(p, "coverage")
 
         return exit_code
 
