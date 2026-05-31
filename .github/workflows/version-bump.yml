@@ -7,7 +7,9 @@ on:
       - main
   workflow_call:
     secrets:
-      SEMVER_BUMP_TOKEN:
+      CFN_GOOD_BOT_APP_ID:
+        required: true
+      CFN_GOOD_BOT_APP_SECRET:
         required: true
 
 env:
@@ -20,10 +22,17 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Generate GitHub App Token
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.CFN_GOOD_BOT_APP_ID }}
+          private-key: ${{ secrets.CFN_GOOD_BOT_APP_SECRET }}
+
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.SEMVER_BUMP_TOKEN }}
+          token: ${{ steps.generate-token.outputs.token }}
           fetch-depth: 0
 
       - name: Setup Python
@@ -127,10 +136,10 @@ jobs:
       - name: Commit and Push
         if: env.BUMP != 'none'
         env:
-          GITHUB_TOKEN: ${{ secrets.SEMVER_BUMP_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "cfn-good-bot"
+          git config --global user.email "cfn-good-bot@whileone.me"
           
           # Only commit if there are changes
           if ! git diff --quiet CMakeLists.txt; then
