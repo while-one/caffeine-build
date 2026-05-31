@@ -42,8 +42,9 @@ IndentCaseLabels: true
 IndentCaseBlocks: false
 
 # --- Section 6: Pointers & Declarations (Rule 3.1.e) ---
-# Enforces white space on each side of the pointer operator (e.g., int * ptr)
-PointerAlignment: Middle
+# OVERRIDE: BARR-C:2018 mandates whitespace on both sides (Middle).
+# Modified to 'Right'
+PointerAlignment: Right
 AlignConsecutiveMacros: true
 AlignConsecutiveDeclarations: true
 AlignConsecutiveAssignments:
