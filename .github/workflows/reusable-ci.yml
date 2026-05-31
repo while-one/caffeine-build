@@ -116,6 +116,31 @@ jobs:
           PRESET: ${{ matrix.preset.name }}
           CAFFEINE_DOCKER_DIGEST: ${{ vars.CURRENT_DOCKER_DIGEST }}
         run: python3 ./caffeine-build/scripts/ci.py test "$PRESET"
+      - name: Run Coverage
+        if: ${{ matrix.preset.tests }}
+        env:
+          PRESET: ${{ matrix.preset.name }}
+          CAFFEINE_DOCKER_DIGEST: ${{ vars.CURRENT_DOCKER_DIGEST }}
+        run: python3 ./caffeine-build/scripts/ci.py coverage "$PRESET"
+      - name: PR Comment with Coverage
+        if: ${{ matrix.preset.tests && github.event_name == 'pull_request' }}
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const covFile = 'build/${{ matrix.preset.name }}/coverage.txt';
+            if (fs.existsSync(covFile)) {
+                const coverage = fs.readFileSync(covFile, 'utf8');
+                github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: '### Code Coverage Report 📊 (`${{ matrix.preset.name }}`)\n```\n' + coverage + '\n```'
+                });
+            } else {
+                console.log("Coverage file not found: " + covFile);
+            }
       - name: Upload Artifacts
         if: always()
         uses: actions/upload-artifact@v4
