@@ -65,7 +65,10 @@
     {
       "name": "base-arm",
       "hidden": true,
-      "inherits": "base-common",
+      "inherits": [
+        "base-common",
+        "base-hardware-defaults"
+      ],
       "generator": "Ninja",
       "toolchainFile": "${sourceDir}/caffeine-build/cmake/toolchains/arm-gcc.cmake",
       "cacheVariables": {
@@ -75,7 +78,10 @@
     {
       "name": "base-riscv",
       "hidden": true,
-      "inherits": "base-common",
+      "inherits": [
+        "base-common",
+        "base-hardware-defaults"
+      ],
       "generator": "Ninja",
       "toolchainFile": "${sourceDir}/caffeine-build/cmake/toolchains/riscv-gcc.cmake",
       "cacheVariables": {

@@ -13,3 +13,9 @@ venv/
 #vim
 *~
 *.un~
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd

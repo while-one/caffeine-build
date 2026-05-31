@@ -9,6 +9,13 @@ on:
         default: 'recursive'
         type: string
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   discover:
     name: Discovery
@@ -23,10 +30,10 @@ jobs:
       - id: set-matrix
         name: Generate Preset Matrix
         run: |
-          chmod +x ./caffeine-build/scripts/*.sh
-          RAW_MATRIX=$(./caffeine-build/scripts/ci.sh list)
-          echo "universe=$(echo $RAW_MATRIX | jq -c .universe)" >> $GITHUB_OUTPUT
-          echo "hardware=$(echo $RAW_MATRIX | jq -c .hardware)" >> $GITHUB_OUTPUT
+          set -eo pipefail
+          RAW_MATRIX=$(python3 ./caffeine-build/scripts/ci.py list)
+          echo "universe=$(echo "$RAW_MATRIX" | jq -c .universe)" >> "$GITHUB_OUTPUT"
+          echo "hardware=$(echo "$RAW_MATRIX" | jq -c .hardware)" >> "$GITHUB_OUTPUT"
 
   lint-format:
     name: Format
@@ -41,7 +48,9 @@ jobs:
         with:
           submodules: ${{ inputs.submodules }}
       - name: Check Formatting
-        run: ./caffeine-build/scripts/ci.sh format ${{ matrix.preset.name }}
+        env:
+          PRESET: ${{ matrix.preset.name }}
+        run: python3 ./caffeine-build/scripts/ci.py format "$PRESET"
 
   documentation:
     name: Docs
@@ -56,24 +65,26 @@ jobs:
         with:
           submodules: ${{ inputs.submodules }}
       - name: Build Documentation
-        run: ./caffeine-build/scripts/ci.sh doc ${{ matrix.preset.name }}
+        env:
+          PRESET: ${{ matrix.preset.name }}
+        run: python3 ./caffeine-build/scripts/ci.py doc "$PRESET"
 
   static-analysis:
     name: Analysis
-    needs: [discover, documentation]
+    needs: [discover, lint-format]
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        preset: ${{ fromJson(needs.discover.outputs.hardware) }}
+        preset: ${{ fromJson(needs.discover.outputs.universe) }}
     steps:
       - uses: actions/checkout@v4
-        if: ${{ !matrix.preset.tests }}
         with:
           submodules: ${{ inputs.submodules }}
       - name: Run Static Analysis
-        if: ${{ !matrix.preset.tests }}
-        run: ./caffeine-build/scripts/ci.sh analyze ${{ matrix.preset.name }}
+        env:
+          PRESET: ${{ matrix.preset.name }}
+        run: python3 ./caffeine-build/scripts/ci.py analyze "$PRESET"
 
   build-and-test:
     name: Build & Test
@@ -87,8 +98,58 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: ${{ inputs.submodules }}
+      - name: Cache Build Directory
+        uses: actions/cache@v4
+        with:
+          path: build/${{ matrix.preset.name }}
+          key: ${{ runner.os }}-build-${{ matrix.preset.name }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ matrix.preset.name }}-
       - name: Build All Targets
-        run: ./caffeine-build/scripts/ci.sh build ${{ matrix.preset.name }}
+        env:
+          PRESET: ${{ matrix.preset.name }}
+          CAFFEINE_DOCKER_DIGEST: ${{ vars.CURRENT_DOCKER_DIGEST }}
+        run: python3 ./caffeine-build/scripts/ci.py build "$PRESET"
       - name: Run Unit Tests
         if: ${{ matrix.preset.tests }}
-        run: ./caffeine-build/scripts/ci.sh test ${{ matrix.preset.name }}
+        env:
+          PRESET: ${{ matrix.preset.name }}
+          CAFFEINE_DOCKER_DIGEST: ${{ vars.CURRENT_DOCKER_DIGEST }}
+        run: python3 ./caffeine-build/scripts/ci.py test "$PRESET"
+      - name: Run Coverage
+        if: ${{ matrix.preset.tests }}
+        env:
+          PRESET: ${{ matrix.preset.name }}
+          CAFFEINE_DOCKER_DIGEST: ${{ vars.CURRENT_DOCKER_DIGEST }}
+        run: python3 ./caffeine-build/scripts/ci.py coverage "$PRESET"
+      - name: PR Comment with Coverage
+        if: ${{ matrix.preset.tests && github.event_name == 'pull_request' }}
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const covFile = 'build/${{ matrix.preset.name }}/coverage.txt';
+            if (fs.existsSync(covFile)) {
+                const coverage = fs.readFileSync(covFile, 'utf8');
+                github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: '### Code Coverage Report 📊 (`${{ matrix.preset.name }}`)\n```\n' + coverage + '\n```'
+                });
+            } else {
+                console.log("Coverage file not found: " + covFile);
+            }
+      - name: Upload Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ matrix.preset.name }}
+          path: |
+            build/${{ matrix.preset.name }}/**/*.elf
+            build/${{ matrix.preset.name }}/**/*.hex
+            build/${{ matrix.preset.name }}/**/*.bin
+            build/${{ matrix.preset.name }}/**/*.map
+            build/${{ matrix.preset.name }}/**/Test.xml
+          retention-days: 14

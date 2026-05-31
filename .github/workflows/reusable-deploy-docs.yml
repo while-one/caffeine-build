@@ -14,6 +14,9 @@ on:
         default: 'recursive'
         type: string
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 permissions:
   contents: read
   pages: write
@@ -24,7 +27,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -33,7 +36,9 @@ jobs:
           fetch-depth: 0
 
       - name: Build Documentation
-        run: ./caffeine-build/scripts/ci.sh doc ${{ inputs.preset }}
+        env:
+          PRESET: ${{ inputs.preset }}
+        run: python3 ./caffeine-build/scripts/ci.py doc "$PRESET"
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

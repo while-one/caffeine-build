@@ -12,6 +12,9 @@ concurrency:
   group: "pages"
   cancel-in-progress: false
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 permissions:
   contents: read
   pages: write
@@ -21,16 +24,16 @@ jobs:
   deploy:
     environment:
       name: github-pages
-      url: ${{ steps: deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout Repository
-        uses: actions/checkout
+        uses: actions/checkout@v4
         with:
           submodules: recursive
 
       - name: Build Documentation
-        run: ./caffeine-build/scripts/ci.sh doc unit-tests-gtest
+        run: python3 ./caffeine-build/scripts/ci.py doc unit-tests-gtest
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
