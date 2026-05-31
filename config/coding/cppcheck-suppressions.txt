@@ -1,3 +1,4 @@
 unusedFunction
 missingIncludeSystem
+unusedStructMember
 *:*/_deps/*
