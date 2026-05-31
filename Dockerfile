@@ -7,11 +7,25 @@ LABEL org.opencontainers.image.source="https://github.com/while-one/caffeine-bui
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
-    cmake git build-essential python3 curl tar \
-    clang-format-17 clang-tidy-17 cppcheck=2.13* doxygen ninja-build gcovr \
-    && ln -s /usr/bin/clang-format-17 /usr/bin/clang-format \
-    && ln -s /usr/bin/clang-tidy-17 /usr/bin/clang-tidy \
+    cmake git build-essential python3 curl tar wget gnupg lsb-release software-properties-common \
+    doxygen ninja-build gcovr
+
+# Add official LLVM 22 repository and install toolset
+RUN wget https://apt.llvm.org/llvm.sh \
+    && chmod +x llvm.sh \
+    && ./llvm.sh 22 \
+    && apt-get install -y clang-format-22 clang-tidy-22 \
+    && ln -sf /usr/bin/clang-format-22 /usr/bin/clang-format \
+    && ln -sf /usr/bin/clang-tidy-22 /usr/bin/clang-tidy \
+    && rm -f llvm.sh \
     && rm -rf /var/lib/apt/lists/*
+
+# Compile Cppcheck 2.20.0 from source for strict host parity
+RUN git clone https://github.com/danmar/cppcheck.git --branch 2.20.0 --depth 1 /tmp/cppcheck \
+    && mkdir /tmp/cppcheck/build && cd /tmp/cppcheck/build \
+    && cmake -DCMAKE_BUILD_TYPE=Release .. \
+    && make -j$(nproc) install \
+    && rm -rf /tmp/cppcheck
 
 WORKDIR /tmp/gtest
 # Pin GTest to the commit SHA of v1.14.0 for supply-chain security
