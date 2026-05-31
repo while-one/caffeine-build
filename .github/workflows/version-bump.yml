@@ -5,6 +5,10 @@ on:
     types: [closed]
     branches:
       - main
+  workflow_call:
+    secrets:
+      SEMVER_BUMP_TOKEN:
+        required: true
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -36,8 +40,8 @@ jobs:
           BODY="$PR_BODY"
           TITLE="$PR_TITLE"
           
-          # Default to none
-          BUMP="none"
+          # Default to patch
+          BUMP="patch"
           
           if printf "%s\n" "$BODY" | grep -iq "\[x\] major" || printf "%s\n" "$TITLE" | grep -iq "\[major\]"; then
             BUMP="major"
